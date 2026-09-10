@@ -504,3 +504,119 @@
   @apply absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full
          border-2 border-white animate-pulse-soft;
 }
+/* ========================================
+   Global Dark Mode
+   ======================================== */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(190, 24, 93, 0.08) 0%, transparent 50%) !important;
+}
+
+/* Main application background */
+html.dark .bg-gradient-pink {
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+}
+
+/* Cards, sidebar, header, modals, and panels */
+html.dark .card,
+html.dark .card-elevated,
+html.dark .glass-card,
+html.dark .bg-white,
+html.dark .bg-white\/95,
+html.dark .bg-white\/90,
+html.dark .bg-white\/80,
+html.dark .bg-pink-50 {
+  background-color: #1f2937 !important;
+  border-color: #4b5563 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Slightly different dark shade for highlighted blocks */
+html.dark .bg-pink-100,
+html.dark .bg-rose-50,
+html.dark .bg-blue-50,
+html.dark .bg-green-50,
+html.dark .bg-gray-50 {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+/* Text colors */
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #f3f4f6 !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: #d1d5db !important;
+}
+
+html.dark .text-pink-800,
+html.dark .text-pink-700 {
+  color: #fbcfe8 !important;
+}
+
+html.dark .text-pink-600,
+html.dark .text-pink-500 {
+  color: #f9a8d4 !important;
+}
+
+html.dark .text-pink-400,
+html.dark .text-pink-300 {
+  color: #fbcfe8 !important;
+}
+
+/* Inputs and selects */
+html.dark .input-field,
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #374151 !important;
+  color: #f9fafb !important;
+  border-color: #6b7280 !important;
+}
+
+html.dark .input-field::placeholder,
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #d1d5db !important;
+}
+
+/* Secondary buttons */
+html.dark .btn-secondary {
+  background-color: #374151 !important;
+  color: #fbcfe8 !important;
+  border-color: #6b7280 !important;
+}
+
+html.dark .btn-secondary:hover {
+  background-color: #4b5563 !important;
+}
+
+/* Badges and table rows */
+html.dark .badge-pink,
+html.dark .badge-rose,
+html.dark .admin-table th,
+html.dark .admin-table tr:hover {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+/* Scrollbar */
+html.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #be185d;
+}

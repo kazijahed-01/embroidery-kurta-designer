@@ -4,7 +4,6 @@ import { LoadingScreen } from './components/ui/LoadingScreen'
 import { Layout } from './components/layout/Layout'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { Login } from './pages/Login'
-import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { DesignStudio } from './pages/DesignStudio'
 import { MyCollection } from './pages/MyCollection'
@@ -48,7 +47,14 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+      <Route
+  path="/signup"
+  element={
+    <PublicRoute>
+      <Login />
+    </PublicRoute>
+  }
+/>
       
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

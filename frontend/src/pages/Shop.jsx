@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { Filter, ShoppingBag, Heart, Grid, List, ChevronDown } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { Filter, ShoppingBag, Heart, Grid, List } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const allProducts = [
@@ -30,8 +31,9 @@ const fabrics = ['All', 'Cotton', 'Silk', 'Linen', 'Chanderi', 'Rayon']
 const priceRanges = ['All', 'Under ₹1000', '₹1000 - ₹1500', '₹1500 - ₹2000', 'Above ₹2000']
 
 export function Shop() {
-  const { addToCart } = useCart()
+  const { addProductToCart } = useCart()
   const { user } = useAuth()
+
   const [viewMode, setViewMode] = useState('grid')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedStyle, setSelectedStyle] = useState('All')
@@ -39,6 +41,7 @@ export function Shop() {
   const [priceRange, setPriceRange] = useState('All')
   const [sortBy, setSortBy] = useState('popular')
   const [showFilters, setShowFilters] = useState(false)
+
   const [wishlist, setWishlist] = useState(() => {
     const saved = localStorage.getItem('wishlist')
     return saved ? JSON.parse(saved) : []
@@ -52,54 +55,88 @@ export function Shop() {
     let products = [...allProducts]
 
     if (selectedCategory !== 'All') {
-      products = products.filter(p => p.category === selectedCategory)
+      products = products.filter((product) => product.category === selectedCategory)
     }
+
     if (selectedStyle !== 'All') {
-      products = products.filter(p => p.style === selectedStyle)
+      products = products.filter((product) => product.style === selectedStyle)
     }
+
     if (selectedFabric !== 'All') {
-      products = products.filter(p => p.fabric === selectedFabric)
+      products = products.filter((product) => product.fabric === selectedFabric)
     }
+
     if (priceRange !== 'All') {
-      products = products.filter(p => {
+      products = products.filter((product) => {
         switch (priceRange) {
-          case 'Under ₹1000': return p.price < 1000
-          case '₹1000 - ₹1500': return p.price >= 1000 && p.price <= 1500
-          case '₹1500 - ₹2000': return p.price >= 1500 && p.price <= 2000
-          case 'Above ₹2000': return p.price > 2000
-          default: return true
+          case 'Under ₹1000':
+            return product.price < 1000
+          case '₹1000 - ₹1500':
+            return product.price >= 1000 && product.price <= 1500
+          case '₹1500 - ₹2000':
+            return product.price >= 1500 && product.price <= 2000
+          case 'Above ₹2000':
+            return product.price > 2000
+          default:
+            return true
         }
       })
     }
 
     switch (sortBy) {
-      case 'price-low': return products.sort((a, b) => a.price - b.price)
-      case 'price-high': return products.sort((a, b) => b.price - a.price)
-      case 'newest': return products.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0))
-      case 'rating': return products.sort((a, b) => b.rating - a.rating)
+      case 'price-low':
+        return products.sort((a, b) => a.price - b.price)
+      case 'price-high':
+        return products.sort((a, b) => b.price - a.price)
+      case 'newest':
+        return products.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0))
+      case 'rating':
+        return products.sort((a, b) => b.rating - a.rating)
       case 'popular':
-      default: return products.sort((a, b) => (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0))
+      default:
+        return products.sort((a, b) => (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0))
     }
   }, [selectedCategory, selectedStyle, selectedFabric, priceRange, sortBy])
 
   const toggleWishlist = (productId) => {
-    setWishlist(prev => {
-      if (prev.includes(productId)) {
+    setWishlist((previousWishlist) => {
+      if (previousWishlist.includes(productId)) {
         toast.success('Removed from wishlist 💔', { emoji: true })
-        return prev.filter(id => id !== productId)
-      } else {
-        toast.success('Added to wishlist! ❤️', { emoji: true })
-        return [...prev, productId]
+        return previousWishlist.filter((id) => id !== productId)
       }
+
+      toast.success('Added to wishlist! ❤️', { emoji: true })
+      return [...previousWishlist, productId]
     })
   }
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = async (product) => {
     if (!user) {
       toast.error('Please login to add to cart 🔒', { emoji: true })
       return
     }
-    addToCart(product.id)
+
+    const { data: databaseProduct, error: productError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('name', product.name)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (productError || !databaseProduct) {
+      console.error(productError)
+      toast.error('This product is not available yet 😢', { emoji: true })
+      return
+    }
+
+    const { error } = await addProductToCart(databaseProduct.id)
+
+    if (error) {
+      console.error(error)
+      toast.error('Could not add the item to cart 😢', { emoji: true })
+      return
+    }
+
     toast.success(`${product.name} added to cart! 🛒`, { emoji: true })
   }
 
@@ -115,8 +152,11 @@ export function Shop() {
           <h1 className="font-playfair text-3xl md:text-4xl font-bold bg-gradient-pink-dark bg-clip-text text-transparent">
             Explore Collection 🛍️
           </h1>
-          <p className="font-poppins text-pink-500 mt-1">Discover handcrafted embroidered kurtas ✨</p>
+          <p className="font-poppins text-pink-500 mt-1">
+            Discover handcrafted embroidered kurtas ✨
+          </p>
         </div>
+
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -125,17 +165,27 @@ export function Shop() {
             <Filter className="w-4 h-4" />
             Filters
           </button>
+
           <div className="flex gap-1 bg-pink-50 rounded-xl p-1" role="group" aria-label="View mode">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-pink-600 shadow-sm' : 'text-pink-400 hover:text-pink-600'}`}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white text-pink-600 shadow-sm'
+                  : 'text-pink-400 hover:text-pink-600'
+              }`}
               aria-label="Grid view"
             >
               <Grid className="w-5 h-5" />
             </button>
+
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-pink-600 shadow-sm' : 'text-pink-400 hover:text-pink-600'}`}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-pink-600 shadow-sm'
+                  : 'text-pink-400 hover:text-pink-600'
+              }`}
               aria-label="List view"
             >
               <List className="w-5 h-5" />
@@ -154,6 +204,7 @@ export function Shop() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-playfair text-xl font-bold text-pink-800">Filters</h2>
+
               <button
                 onClick={() => {
                   setSelectedCategory('All')
@@ -166,53 +217,74 @@ export function Shop() {
                 Clear All
               </button>
             </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="input-label">Category</label>
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(event) => setSelectedCategory(event.target.value)}
                   className="input-field"
                 >
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
                 <label className="input-label">Style</label>
                 <select
                   value={selectedStyle}
-                  onChange={(e) => setSelectedStyle(e.target.value)}
+                  onChange={(event) => setSelectedStyle(event.target.value)}
                   className="input-field"
                 >
-                  {styles.map(s => <option key={s} value={s}>{s}</option>)}
+                  {styles.map((style) => (
+                    <option key={style} value={style}>
+                      {style}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
                 <label className="input-label">Fabric</label>
                 <select
                   value={selectedFabric}
-                  onChange={(e) => setSelectedFabric(e.target.value)}
+                  onChange={(event) => setSelectedFabric(event.target.value)}
                   className="input-field"
                 >
-                  {fabrics.map(f => <option key={f} value={f}>{f}</option>)}
+                  {fabrics.map((fabric) => (
+                    <option key={fabric} value={fabric}>
+                      {fabric}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
                 <label className="input-label">Price Range</label>
                 <select
                   value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
+                  onChange={(event) => setPriceRange(event.target.value)}
                   className="input-field"
                 >
-                  {priceRanges.map(p => <option key={p} value={p}>{p}</option>)}
+                  {priceRanges.map((range) => (
+                    <option key={range} value={range}>
+                      {range}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
+
             <div className="mt-4">
               <label className="input-label">Sort By</label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(event) => setSortBy(event.target.value)}
                 className="input-field max-w-xs"
               >
                 <option value="popular">Most Popular</option>
@@ -242,45 +314,83 @@ export function Shop() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
-          className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-4'}
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+              : 'space-y-4'
+          }
         >
-          {filteredProducts.map((product, i) => (
+          {filteredProducts.map((product, index) => (
             <motion.article
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03, duration: 0.4 }}
-              className={viewMode === 'grid' ? 'design-card group' : 'design-card group flex flex-col md:flex-row'}
+              transition={{ delay: index * 0.03, duration: 0.4 }}
+              className={
+                viewMode === 'grid'
+                  ? 'design-card group'
+                  : 'design-card group flex flex-col md:flex-row'
+              }
             >
-              <div className={viewMode === 'grid' ? 'relative aspect-[3/4]' : 'relative w-48 h-64 md:w-64 md:h-80 flex-shrink-0'}>
+              <div
+                className={
+                  viewMode === 'grid'
+                    ? 'relative aspect-[3/4]'
+                    : 'relative w-48 h-64 md:w-64 md:h-80 flex-shrink-0'
+                }
+              >
                 <div className="absolute inset-0 bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
-                  <span className="text-6xl" role="img" aria-hidden="true">{product.image}</span>
+                  <span className="text-6xl" role="img" aria-hidden="true">
+                    {product.image}
+                  </span>
                 </div>
+
                 <div className="absolute top-3 left-3 flex flex-col gap-1">
                   {product.isNew && <span className="badge badge-rose">NEW</span>}
                   {product.isPopular && <span className="badge badge-pink">POPULAR</span>}
                 </div>
+
                 <div className="absolute top-3 right-3 flex flex-col gap-1">
                   <motion.button
                     onClick={() => toggleWishlist(product.id)}
                     whileHover={{ scale: 1.2 }}
                     className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg ${
-                      wishlist.includes(product.id) ? 'text-rose-500' : 'text-pink-400 hover:text-rose-500'
+                      wishlist.includes(product.id)
+                        ? 'text-rose-500'
+                        : 'text-pink-400 hover:text-rose-500'
                     }`}
-                    aria-label={wishlist.includes(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                    aria-label={
+                      wishlist.includes(product.id)
+                        ? 'Remove from wishlist'
+                        : 'Add to wishlist'
+                    }
                   >
-                    <Heart className={`w-5 h-5 ${wishlist.includes(product.id) ? 'fill-current' : ''}`} />
+                    <Heart
+                      className={`w-5 h-5 ${
+                        wishlist.includes(product.id) ? 'fill-current' : ''
+                      }`}
+                    />
                   </motion.button>
                 </div>
               </div>
 
-              <div className={viewMode === 'grid' ? 'p-4' : 'flex-1 p-4 flex flex-col justify-between'}>
+              <div
+                className={
+                  viewMode === 'grid'
+                    ? 'p-4'
+                    : 'flex-1 p-4 flex flex-col justify-between'
+                }
+              >
                 <div>
-                  <h3 className="font-playfair font-bold text-pink-800 line-clamp-1">{product.name}</h3>
+                  <h3 className="font-playfair font-bold text-pink-800 line-clamp-1">
+                    {product.name}
+                  </h3>
+
                   <div className="flex flex-wrap gap-1 mt-2">
                     <span className="badge badge-pink">{product.style}</span>
                     <span className="badge badge-pink">{product.fabric}</span>
                   </div>
+
                   <div className="flex flex-wrap gap-1 mt-2">
                     <span className="badge badge-rose">{product.embroidery}</span>
                     <span className="badge badge-rose">{product.category}</span>
@@ -291,7 +401,9 @@ export function Shop() {
                   <div className="flex items-center gap-1 text-yellow-500">
                     <span className="text-lg">★</span>
                     <span className="font-poppins font-medium">{product.rating}</span>
-                    <span className="font-poppins text-sm text-pink-400">({product.reviews})</span>
+                    <span className="font-poppins text-sm text-pink-400">
+                      ({product.reviews})
+                    </span>
                   </div>
                 </div>
 
@@ -299,9 +411,12 @@ export function Shop() {
                   <div>
                     <span className="price-display text-xl">₹{product.price}</span>
                     {product.originalPrice > product.price && (
-                      <span className="price-original ml-2">₹{product.originalPrice}</span>
+                      <span className="price-original ml-2">
+                        ₹{product.originalPrice}
+                      </span>
                     )}
                   </div>
+
                   <motion.button
                     onClick={() => handleAddToCart(product)}
                     className="btn-primary text-sm px-4 py-2"
@@ -324,9 +439,15 @@ export function Shop() {
           animate={{ opacity: 1, y: 0 }}
           className="card p-16 text-center"
         >
-          <span className="text-4xl block mb-3" role="img" aria-hidden="true">🔍</span>
-          <h3 className="font-playfair text-xl font-bold text-pink-700 mb-2">No designs found</h3>
-          <p className="font-poppins text-pink-500 mb-4">Try adjusting your filters or search terms</p>
+          <span className="text-4xl block mb-3" role="img" aria-hidden="true">
+            🔍
+          </span>
+          <h3 className="font-playfair text-xl font-bold text-pink-700 mb-2">
+            No designs found
+          </h3>
+          <p className="font-poppins text-pink-500 mb-4">
+            Try adjusting your filters or search terms
+          </p>
           <button
             onClick={() => {
               setSelectedCategory('All')
