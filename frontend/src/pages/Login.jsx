@@ -11,6 +11,7 @@ export function Login() {
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -240,20 +241,53 @@ export function Login() {
                     {errors.email && <p className="mt-1 text-sm text-rose-500 font-poppins">{errors.email}</p>}
                   </motion.div>
 
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.4 }}>
-                    <label htmlFor="password" className="input-label">Password 🔒</label>
-                    <input
-                      type="password"
-                      id="password"
-                      value={formData.password}
-                      onChange={(event) => setFormData((previous) => ({ ...previous, password: event.target.value }))}
-                      className={`input-field ${errors.password ? 'border-rose-400 focus:ring-rose-300' : ''}`}
-                      placeholder="Enter password"
-                      autoComplete={isLogin ? 'current-password' : 'new-password'}
-                      disabled={loading}
-                    />
-                    {errors.password && <p className="mt-1 text-sm text-rose-500 font-poppins">{errors.password}</p>}
-                  </motion.div>
+                 <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.6, duration: 0.4 }}
+>
+  <label htmlFor="password" className="input-label">
+    Password 🔒
+  </label>
+
+  <div className="relative">
+    <input
+      type={showPassword ? "text" : "password"}
+      id="password"
+      value={formData.password}
+      onChange={(event) =>
+        setFormData((previous) => ({
+          ...previous,
+          password: event.target.value,
+        }))
+      }
+      className={`input-field pr-12 ${
+        errors.password
+          ? "border-rose-400 focus:ring-rose-300"
+          : ""
+      }`}
+      placeholder="Enter password"
+      autoComplete={isLogin ? "current-password" : "new-password"}
+      disabled={loading}
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword((previous) => !previous)}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-xl"
+      aria-label={showPassword ? "Hide password" : "Show password"}
+      disabled={loading}
+    >
+      {showPassword ? "🙉" : "🙈"}
+    </button>
+  </div>
+
+  {errors.password && (
+    <p className="mt-1 text-sm text-rose-500 font-poppins">
+      {errors.password}
+    </p>
+  )}
+</motion.div>
 
                   {!isLogin && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.4 }}>
