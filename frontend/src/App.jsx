@@ -8,7 +8,7 @@ import { AdminLayout } from './components/layout/AdminLayout'
 
 import { Login } from './pages/Login'
 import { AdminLogin } from './pages/AdminLogin'
-
+import { ResetPassword } from './pages/ResetPassword'
 import { Dashboard } from './pages/Dashboard'
 import { DesignStudio } from './pages/DesignStudio'
 import { MyCollection } from './pages/MyCollection'
@@ -25,7 +25,6 @@ import { AdminEmbroidery } from './admin/Embroidery'
 import { AdminOrders } from './admin/Orders'
 import { AdminUsers } from './admin/Users'
 import { AdminAnalytics } from './admin/Analytics'
-
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, isAdmin } = useAuth()
@@ -50,7 +49,6 @@ function ProtectedRoute({ children, adminOnly = false }) {
   return children
 }
 
-
 function AdminRoute({ children }) {
   return (
     <ProtectedRoute adminOnly>
@@ -58,7 +56,6 @@ function AdminRoute({ children }) {
     </ProtectedRoute>
   )
 }
-
 
 function PublicRoute({ children }) {
   const { user, loading, isAdmin } = useAuth()
@@ -79,7 +76,6 @@ function PublicRoute({ children }) {
   return children
 }
 
-
 export default function App() {
   return (
     <Routes>
@@ -91,6 +87,12 @@ export default function App() {
             <Login />
           </PublicRoute>
         }
+      />
+
+      {/* RESET PASSWORD */}
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
       />
 
       {/* ADMIN LOGIN */}

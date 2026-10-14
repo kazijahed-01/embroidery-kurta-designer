@@ -105,6 +105,12 @@ export function AuthProvider({ children }) {
     })
   }
 
+  const updatePassword = async (password) => {
+    return supabase.auth.updateUser({
+      password
+    })
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
 
@@ -118,18 +124,33 @@ export function AuthProvider({ children }) {
 
   const updateProfile = async (updates) => {
     if (!user) {
-      return { error: { message: 'You are not logged in.' } }
+      return {
+        error: {
+          message: 'You are not logged in.'
+        }
+      }
     }
 
     // Never allow a browser request to alter role or status.
-    const allowedFields = ['name', 'phone', 'avatar_url', 'bio']
+    const allowedFields = [
+      'name',
+      'phone',
+      'avatar_url',
+      'bio'
+    ]
 
     const safeUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([key]) => allowedFields.includes(key))
+      Object.entries(updates).filter(([key]) =>
+        allowedFields.includes(key)
+      )
     )
 
     if (Object.keys(safeUpdates).length === 0) {
-      return { error: { message: 'No permitted profile fields to update.' } }
+      return {
+        error: {
+          message: 'No permitted profile fields to update.'
+        }
+      }
     }
 
     const { data, error } = await supabase
@@ -155,6 +176,7 @@ export function AuthProvider({ children }) {
         isAdmin,
         signUp,
         signIn,
+        updatePassword,
         signOut,
         updateProfile,
         refreshProfile: fetchUserProfile
