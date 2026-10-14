@@ -620,3 +620,281 @@ html.dark ::-webkit-scrollbar-track {
 html.dark ::-webkit-scrollbar-thumb {
   background: #be185d;
 }
+/* ==========================================
+   THREAD & BLOOM
+   RESPONSIVE DESIGN FOR ALL DEVICES
+   ========================================== */
+
+/* Prevent horizontal scrolling */
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  scroll-behavior: smooth;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  max-width: 100%;
+}
+
+/* Make sizing predictable */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Images and media fit their containers */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+/* Inputs and buttons work well on touch devices */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Long text must not break the layout */
+h1,
+h2,
+h3,
+h4,
+p,
+a,
+label,
+span {
+  overflow-wrap: anywhere;
+}
+
+/* Main content should fit the screen */
+main,
+section,
+article {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Tables can scroll on small screens */
+.admin-table-wrapper,
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+/* Keep forms inside their containers */
+form {
+  width: 100%;
+  min-width: 0;
+}
+
+.input-field {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+/* Avoid excessive animation for users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================
+   MOBILE: 320px to 480px
+   ========================================== */
+
+@media screen and (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  .glass-card {
+    padding: 20px !important;
+    border-radius: 20px;
+  }
+
+  .card,
+  .card-elevated {
+    border-radius: 16px;
+  }
+
+  .input-field {
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .btn-primary {
+    max-width: 100%;
+    padding: 13px 18px;
+    font-size: 15px;
+    white-space: normal;
+  }
+
+  .btn-secondary {
+    max-width: 100%;
+    padding: 11px 16px;
+    white-space: normal;
+  }
+
+  .section-title {
+    font-size: 1.65rem;
+    line-height: 1.3;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 10px;
+    white-space: nowrap;
+  }
+
+  .avatar-lg {
+    width: 96px;
+    height: 96px;
+  }
+
+  /* Prevent fixed login panels from being cut off */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+/* ==========================================
+   SMALL MOBILE: 320px to 360px
+   ========================================== */
+
+@media screen and (max-width: 360px) {
+  .glass-card {
+    padding: 15px !important;
+  }
+
+  .section-title {
+    font-size: 1.45rem;
+  }
+
+  .input-field {
+    padding: 11px 12px;
+  }
+
+  .btn-primary {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+}
+
+/* ==========================================
+   TABLETS: 481px to 768px
+   ========================================== */
+
+@media screen and (min-width: 481px) and (max-width: 768px) {
+  .glass-card {
+    padding: 26px;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 12px;
+  }
+}
+
+/* ==========================================
+   LAPTOPS: 769px to 1024px
+   ========================================== */
+
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .section-title {
+    font-size: 2.2rem;
+  }
+
+  .card,
+  .card-elevated {
+    border-radius: 18px;
+  }
+}
+
+/* ==========================================
+   LARGE SCREENS: 1440px and above
+   ========================================== */
+
+@media screen and (min-width: 1440px) {
+  #root {
+    margin-inline: auto;
+  }
+}
+
+/* ==========================================
+   TOUCH DEVICES
+   ========================================== */
+
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .color-swatch:hover {
+    transform: none;
+  }
+
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .nav-link,
+  .sidebar-link {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
