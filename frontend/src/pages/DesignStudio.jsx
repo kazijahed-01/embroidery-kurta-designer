@@ -15,6 +15,20 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// --------------------------------------------------
+// KURTA IMAGES
+// Images must be inside frontend/public/kurtas/
+// --------------------------------------------------
+
+const kurtaImages = {
+  straight: '/kurtas/kurta-collection1.png',
+  anarkali: '/kurtas/kurta-collection2.png',
+  'a-line': '/kurtas/kurta-collection3.png',
+  short: '/kurtas/kurta-collection4.png',
+  long: '/kurtas/kurta-collection5.png',
+  western: '/kurtas/kurta-collection6.png'
+}
+
 const steps = [
   { id: 1, label: 'Kurta Style', icon: '👗' },
   { id: 2, label: 'Fabric', icon: '☁️' },
@@ -40,60 +54,32 @@ const embroideryColors = [
   '#0d9488'
 ]
 
-/*
- * Converts a selected hex color into a CSS filter.
- *
- * This is used because normal CSS "color" does not reliably recolor
- * system emoji characters. The embroidery icon is converted into a
- * monochrome shape first and then tinted with the selected color.
- */
+// CSS filters for a simple embroidery color effect.
+// Emoji colors may vary between browsers and operating systems.
+
 const hexToFilter = hex => {
-  const colorMap = {
-    '#ec4899':
-      'brightness(0) saturate(100%) invert(37%) sepia(93%) saturate(2500%) hue-rotate(305deg) brightness(97%) contrast(96%)',
-    '#be185d':
-      'brightness(0) saturate(100%) invert(18%) sepia(90%) saturate(4600%) hue-rotate(320deg) brightness(75%) contrast(96%)',
-    '#9d174d':
-      'brightness(0) saturate(100%) invert(16%) sepia(74%) saturate(3500%) hue-rotate(320deg) brightness(70%) contrast(100%)',
-    '#f43f5e':
-      'brightness(0) saturate(100%) invert(36%) sepia(90%) saturate(2700%) hue-rotate(330deg) brightness(100%) contrast(96%)',
-    '#ffffff':
-      'brightness(0) invert(1)',
-    '#1f2937':
-      'brightness(0) saturate(100%) invert(13%) sepia(11%) saturate(1500%) hue-rotate(182deg) brightness(91%) contrast(92%)',
-    '#fbbf24':
-      'brightness(0) saturate(100%) invert(78%) sepia(96%) saturate(1000%) hue-rotate(350deg) brightness(101%) contrast(98%)',
-    '#059669':
-      'brightness(0) saturate(100%) invert(40%) sepia(83%) saturate(900%) hue-rotate(120deg) brightness(88%) contrast(101%)',
-    '#2563eb':
-      'brightness(0) saturate(100%) invert(35%) sepia(96%) saturate(1800%) hue-rotate(210deg) brightness(91%) contrast(94%)',
-    '#9333ea':
-      'brightness(0) saturate(100%) invert(30%) sepia(97%) saturate(2500%) hue-rotate(265deg) brightness(90%) contrast(96%)',
-    '#ea580c':
-      'brightness(0) saturate(100%) invert(42%) sepia(97%) saturate(2000%) hue-rotate(355deg) brightness(96%) contrast(98%)',
-    '#0d9488':
-      'brightness(0) saturate(100%) invert(40%) sepia(80%) saturate(900%) hue-rotate(135deg) brightness(90%) contrast(96%)'
+  const filters = {
+    '#ec4899': 'hue-rotate(300deg) saturate(1.5)',
+    '#be185d': 'hue-rotate(320deg) saturate(2)',
+    '#9d174d': 'hue-rotate(320deg) saturate(2.5)',
+    '#f43f5e': 'hue-rotate(330deg) saturate(2)',
+    '#ffffff': 'grayscale(1) brightness(2)',
+    '#1f2937': 'grayscale(1) brightness(0.45)',
+    '#fbbf24': 'hue-rotate(15deg) saturate(2)',
+    '#059669': 'hue-rotate(100deg) saturate(2)',
+    '#2563eb': 'hue-rotate(200deg) saturate(2)',
+    '#9333ea': 'hue-rotate(260deg) saturate(2)',
+    '#ea580c': 'hue-rotate(340deg) saturate(2)',
+    '#0d9488': 'hue-rotate(120deg) saturate(2)'
   }
 
-  return colorMap[hex] || colorMap['#ec4899']
+  return filters[hex] || 'none'
 }
 
-/*
- * Embroidery preview.
- *
- * The original application uses emoji icons for embroidery.
- * Emoji glyphs cannot reliably receive CSS color, so this component
- * uses grayscale + CSS filtering to visually tint the embroidery.
- */
-function EmbroideryMark({
-  icon,
-  color,
-  size = 'text-5xl',
-  className = ''
-}) {
+function EmbroideryMark({ icon, color, size = 'text-4xl' }) {
   return (
     <span
-      className={`${size} inline-block leading-none ${className}`}
+      className={`${size} inline-block leading-none`}
       role="img"
       aria-label="Embroidery design"
       style={{
@@ -105,6 +91,111 @@ function EmbroideryMark({
     </span>
   )
 }
+
+// --------------------------------------------------
+// REUSABLE KURTA PREVIEW
+// --------------------------------------------------
+
+function KurtaPreview({
+  styleId,
+  styleName,
+  color,
+  selectedEmbroidery,
+  selectedPosition,
+  embroideryColor,
+  customizations,
+  large = false
+}) {
+  const imagePath = kurtaImages[styleId]
+
+  const [imageError, setImageError] = useState(false)
+
+  useEffect(() => {
+    setImageError(false)
+  }, [imagePath])
+
+  const x = Number(customizations?.x || 0)
+  const y = Number(customizations?.y || 0)
+  const scale = Number(customizations?.scale || 1)
+  const rotation = Number(customizations?.rotation || 0)
+
+  return (
+    <div
+      className={`relative w-full ${
+        large ? 'max-w-lg' : 'max-w-sm'
+      } mx-auto aspect-[3/4] rounded-2xl overflow-hidden border border-pink-100 bg-white`}
+    >
+      {!imageError ? (
+        <img
+          src={imagePath}
+          alt={styleName || 'Selected kurta'}
+          className="absolute inset-0 w-full h-full object-contain"
+          onError={() => {
+            setImageError(true)
+            console.error('Kurta image not found:', imagePath)
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-pink-50">
+          <span className="text-5xl mb-3">👗</span>
+
+          <p className="font-semibold text-pink-800">
+            Kurta image not found
+          </p>
+
+          <p className="text-sm text-pink-600 mt-2">
+            Check the image filename inside public/kurtas.
+          </p>
+        </div>
+      )}
+
+      {/* Color overlay is deliberately subtle.
+          It does not perfectly recolor the original image. */}
+      {color && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundColor: color,
+            opacity: 0.08,
+            mixBlendMode: 'multiply'
+          }}
+        />
+      )}
+
+      {/* Embroidery preview */}
+      {selectedEmbroidery && selectedPosition && (
+        <motion.div
+          key={`${selectedEmbroidery.id}-${selectedPosition.id}`}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute z-10"
+          style={{
+            left: `calc(${selectedPosition.coords.x}% + ${x}%)`,
+            top: `calc(${selectedPosition.coords.y}% + ${y}%)`,
+            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
+            transformOrigin: 'center'
+          }}
+        >
+          <EmbroideryMark
+            icon={selectedEmbroidery.icon}
+            color={embroideryColor}
+            size={large ? 'text-6xl' : 'text-4xl'}
+          />
+        </motion.div>
+      )}
+
+      <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-white/90 backdrop-blur-sm p-2 text-center">
+        <p className="font-semibold text-pink-800">
+          {styleName || 'Your Kurta'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// --------------------------------------------------
+// MAIN DESIGN STUDIO
+// --------------------------------------------------
 
 export function DesignStudio() {
   const {
@@ -129,47 +220,56 @@ export function DesignStudio() {
   const [showPreview, setShowPreview] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveName, setSaveName] = useState('')
-  const [fabricTexture, setFabricTexture] = useState('fabric-cotton')
+  const [fabricTexture, setFabricTexture] = useState('')
 
   const price = calculatePrice()
 
   const selectedStyle = kurtaStyles.find(
-    s => s.id === currentDesign.kurtaStyle
+    style => style.id === currentDesign.kurtaStyle
   )
 
   const selectedFabric = fabrics.find(
-    f => f.id === currentDesign.fabric
+    fabric => fabric.id === currentDesign.fabric
   )
 
   const selectedColor = colors.find(
-    c => c.id === currentDesign.color
+    color => color.id === currentDesign.color
   )
 
   const selectedEmbroidery = embroideryDesigns.find(
-    e => e.id === currentDesign.embroidery
+    embroidery => embroidery.id === currentDesign.embroidery
   )
 
   const selectedPosition = positions.find(
-    p => p.id === currentDesign.position
+    position => position.id === currentDesign.position
   )
 
   const selectedEmbroideryColor =
     currentDesign.customizations?.embroideryColor || '#ec4899'
 
+  useEffect(() => {
+    if (selectedFabric) {
+      setFabricTexture(selectedFabric.texture || '')
+    }
+  }, [selectedFabric])
+
+  // ------------------------------------------------
+  // VALIDATION
+  // ------------------------------------------------
+
   const canProceed = () => {
     switch (currentDesign.step) {
       case 1:
-        return !!currentDesign.kurtaStyle
+        return Boolean(currentDesign.kurtaStyle)
       case 2:
-        return !!currentDesign.fabric
+        return Boolean(currentDesign.fabric)
       case 3:
-        return !!currentDesign.color
+        return Boolean(currentDesign.color)
       case 4:
-        return !!currentDesign.embroidery
+        return Boolean(currentDesign.embroidery)
       case 5:
-        return !!currentDesign.position
+        return Boolean(currentDesign.position)
       case 6:
-        return true
       case 7:
         return true
       default:
@@ -178,10 +278,13 @@ export function DesignStudio() {
   }
 
   const handleNext = () => {
-    if (currentDesign.step < 7 && canProceed()) {
+    if (!canProceed()) {
+      toast.error('Please select an option first.')
+      return
+    }
+
+    if (currentDesign.step < 7) {
       updateStep(currentDesign.step + 1)
-    } else if (currentDesign.step === 7) {
-      setShowPreview(true)
     }
   }
 
@@ -191,44 +294,60 @@ export function DesignStudio() {
     }
   }
 
+  // ------------------------------------------------
+  // SAVE DESIGN
+  // ------------------------------------------------
+
   const handleSaveDesign = async () => {
     if (!saveName.trim()) {
-      toast.error('Please enter a name for your design 💖')
+      toast.error('Please enter a name for your design.')
       return
     }
 
     if (!user) {
-      toast.error('Please login to save designs 🔒')
+      toast.error('Please login to save your design.')
       return
     }
 
     try {
-      await saveDesign(saveName)
+      await saveDesign(saveName.trim())
 
-      toast.success('Design saved to My Collection! ❤️')
+      toast.success('Design saved to My Collection!')
 
       setShowSaveModal(false)
       setSaveName('')
     } catch (error) {
       console.error('Error saving design:', error)
-      toast.error(error.message || 'Failed to save design')
+
+      toast.error(
+        error?.message || 'Failed to save your design.'
+      )
     }
   }
 
+  // ------------------------------------------------
+  // ADD TO CART
+  // ------------------------------------------------
+
   const handleAddToCart = async () => {
     if (!user) {
-      toast.error('Please login to add to cart 🔒')
+      toast.error('Please login to add your design to cart.')
+      return
+    }
+
+    if (!selectedStyle) {
+      toast.error('Please select a kurta first.')
       return
     }
 
     try {
       const savedDesign = await saveDesign(
-        `${selectedStyle?.name || 'Custom'} Embroidered Dress`
+        `${selectedStyle.name} Custom Design`
       )
 
       if (!savedDesign?.id) {
         throw new Error(
-          'Design was saved but no design ID was returned.'
+          'Could not get the saved design ID. Please try again.'
         )
       }
 
@@ -239,57 +358,39 @@ export function DesignStudio() {
       )
 
       if (result?.error) {
-        console.error('Cart error:', result.error)
-        toast.error(
-          result.error.message || 'Failed to add to cart'
-        )
-        return
+        throw result.error
       }
 
-      toast.success(
-        'Your custom dress was added to cart! 🛒✨'
-      )
+      toast.success('Your custom kurta was added to cart!')
     } catch (error) {
-      console.error(
-        'Error adding design to cart:',
-        error
-      )
+      console.error('Add to cart error:', error)
+
       toast.error(
-        error.message || 'Failed to add to cart'
+        error?.message || 'Failed to add your design to cart.'
       )
     }
   }
 
-  const kurtaSilhouettes = {
-    straight:
-      'polygon(25% 0%, 75% 0%, 85% 100%, 15% 100%)',
-    anarkali:
-      'polygon(30% 0%, 70% 0%, 95% 100%, 5% 100%)',
-    'a-line':
-      'polygon(35% 0%, 65% 0%, 90% 100%, 10% 100%)',
-    short:
-      'polygon(25% 0%, 75% 0%, 80% 60%, 20% 60%)',
-    long:
-      'polygon(20% 0%, 80% 0%, 90% 100%, 10% 100%)',
-    western:
-      'polygon(30% 0%, 70% 0%, 75% 70%, 25% 70%)'
-  }
+  // ------------------------------------------------
+  // COMMON CARD STYLES
+  // ------------------------------------------------
 
-  useEffect(() => {
-    if (selectedFabric) {
-      setFabricTexture(selectedFabric.texture)
-    }
-  }, [selectedFabric])
+  const selectedCard = id =>
+    'relative p-4 rounded-2xl border-2 transition-all duration-200 ' +
+    (id
+      ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-100'
+      : 'border-pink-100 hover:border-pink-300 hover:bg-pink-50')
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-3 md:px-0">
+      {/* HEADER */}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
         className="mb-8"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="font-playfair text-3xl md:text-4xl font-bold bg-gradient-pink-dark bg-clip-text text-transparent">
               Design Studio ✨
@@ -301,645 +402,478 @@ export function DesignStudio() {
           </div>
 
           <button
+            type="button"
             onClick={() => {
-              if (confirm('Reset all progress? 😢')) {
+              if (window.confirm('Reset all your design progress?')) {
                 resetDesign()
+                setShowPreview(false)
+                toast.success('Design reset successfully.')
               }
             }}
             className="btn-ghost text-sm"
           >
-            <RotateCcw className="w-4 h-4 mr-1" />
+            <RotateCcw className="w-4 h-4 mr-1 inline" />
             Reset
           </button>
         </div>
 
+        {/* DESKTOP STEPS */}
+
         <div className="hidden md:flex items-center justify-center gap-2 mb-8">
-          {steps.map((step, i) => (
-            <motion.div
-              key={step.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: i * 0.05,
-                duration: 0.3
-              }}
-              className="flex items-center"
-            >
-              <div
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  if (step.id <= currentDesign.step) {
+                    updateStep(step.id)
+                  }
+                }}
+                title={step.label}
                 className={`step-indicator ${
-                  i + 1 < currentDesign.step
+                  index + 1 < currentDesign.step
                     ? 'step-completed'
-                    : i + 1 === currentDesign.step
+                    : index + 1 === currentDesign.step
                       ? 'step-active'
                       : 'step-pending'
                 }`}
               >
-                {i + 1 < currentDesign.step ? (
+                {index + 1 < currentDesign.step ? (
                   <Check className="w-5 h-5" />
                 ) : (
                   step.icon
                 )}
-              </div>
+              </button>
 
-              {i < steps.length - 1 && (
+              {index < steps.length - 1 && (
                 <div className="step-connector" />
               )}
-            </motion.div>
+            </div>
           ))}
         </div>
 
-        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4">
+        {/* MOBILE STEPS */}
+
+        <div className="md:hidden overflow-x-auto pb-3">
           <div className="flex gap-2 min-w-max">
-            {steps.map((step, i) => (
-              <div
+            {steps.map((step, index) => (
+              <button
+                type="button"
                 key={step.id}
+                onClick={() => {
+                  if (step.id <= currentDesign.step) {
+                    updateStep(step.id)
+                  }
+                }}
                 className={`flex items-center gap-1 px-3 py-2 rounded-full ${
-                  i + 1 < currentDesign.step
+                  index + 1 < currentDesign.step
                     ? 'bg-pink-400 text-white'
-                    : i + 1 === currentDesign.step
-                      ? 'bg-gradient-pink-dark text-white'
-                      : 'bg-pink-100 text-pink-300'
+                    : index + 1 === currentDesign.step
+                      ? 'bg-pink-600 text-white'
+                      : 'bg-pink-100 text-pink-400'
                 }`}
               >
-                <span className="text-lg">
-                  {step.icon}
-                </span>
-
-                <span className="font-poppins font-medium whitespace-nowrap">
+                <span>{step.icon}</span>
+                <span className="font-poppins text-sm whitespace-nowrap">
                   {step.label}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="lg:col-span-2 space-y-6"
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentDesign.step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="card-elevated p-6"
-            >
-              <h2 className="font-playfair text-2xl font-bold text-pink-800 mb-6 flex items-center gap-2">
-                <span
-                  className="text-2xl"
-                  role="img"
-                  aria-hidden="true"
-                >
-                  {steps[currentDesign.step - 1].icon}
-                </span>
+      {/* MAIN LAYOUT */}
 
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <AnimatePresence mode="wait">
+            <motion.section
+              key={currentDesign.step}
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.2 }}
+              className="card-elevated p-4 md:p-6"
+            >
+              <h2 className="font-playfair text-2xl font-bold text-pink-800 mb-6">
+                {steps[currentDesign.step - 1]?.icon}{' '}
                 Step {currentDesign.step}:{' '}
-                {steps[currentDesign.step - 1].label}
+                {steps[currentDesign.step - 1]?.label}
               </h2>
 
-              {/* STEP 1 */}
+              {/* STEP 1: KURTA STYLE */}
+
               {currentDesign.step === 1 && (
-                <div
-                  className="grid grid-cols-2 md:grid-cols-3 gap-4"
-                  role="listbox"
-                  aria-label="Select kurta style"
-                >
-                  {kurtaStyles.map(style => (
-                    <motion.button
-                      key={style.id}
-                      onClick={() =>
-                        updateField(
-                          'kurtaStyle',
-                          style.id
-                        )
-                      }
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative p-4 rounded-2xl border-2 transition-all duration-300 ${
-                        currentDesign.kurtaStyle ===
-                        style.id
-                          ? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-200/50'
-                          : 'border-pink-100 hover:border-pink-300 hover:bg-pink-50'
-                      }`}
-                      role="option"
-                      aria-selected={
-                        currentDesign.kurtaStyle ===
-                        style.id
-                      }
-                    >
-                      <div className="relative w-full aspect-square mb-3">
-                        <div
-                          className="absolute inset-0 bg-gradient-to-b from-pink-100 to-pink-200"
-                          style={{
-                            clipPath:
-                              kurtaSilhouettes[
-                                style.id
-                              ]
-                          }}
-                        />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {kurtaStyles.map(style => {
+                    const isSelected =
+                      currentDesign.kurtaStyle === style.id
 
-                        {currentDesign.kurtaStyle ===
-                          style.id && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Check className="w-8 h-8 text-white bg-pink-500 rounded-full" />
-                          </div>
-                        )}
-                      </div>
-
-                      <h3 className="font-playfair font-bold text-pink-800">
-                        {style.name}
-                      </h3>
-
-                      <p className="font-poppins text-sm text-pink-500">
-                        {style.description}
-                      </p>
-
-                      <p className="font-poppins font-semibold text-pink-600 mt-1">
-                        ₹{style.price}
-                      </p>
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-
-              {/* STEP 2 */}
-              {currentDesign.step === 2 && (
-                <div
-                  className="grid grid-cols-2 md:grid-cols-3 gap-4"
-                  role="listbox"
-                  aria-label="Select fabric"
-                >
-                  {fabrics.map(fabric => (
-                    <motion.button
-                      key={fabric.id}
-                      onClick={() =>
-                        updateField(
-                          'fabric',
-                          fabric.id
-                        )
-                      }
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative p-4 rounded-2xl border-2 transition-all duration-300 ${
-                        currentDesign.fabric ===
-                        fabric.id
-                          ? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-200/50'
-                          : 'border-pink-100 hover:border-pink-300 hover:bg-pink-50'
-                      }`}
-                      role="option"
-                      aria-selected={
-                        currentDesign.fabric ===
-                        fabric.id
-                      }
-                    >
-                      <div className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden">
-                        <div
-                          className={`absolute inset-0 ${fabric.texture} opacity-30`}
-                        />
-
-                        <div
-                          className="absolute inset-0 bg-gradient-to-b from-pink-100 to-pink-200"
-                          style={{
-                            clipPath: selectedStyle
-                              ? kurtaSilhouettes[
-                                  selectedStyle.id
-                                ]
-                              : kurtaSilhouettes.straight
-                          }}
-                        />
-
-                        {currentDesign.fabric ===
-                          fabric.id && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Check className="w-8 h-8 text-white bg-pink-500 rounded-full" />
-                          </div>
-                        )}
-                      </div>
-
-                      <h3 className="font-playfair font-bold text-pink-800 flex items-center gap-1">
-                        {fabric.icon} {fabric.name}
-                      </h3>
-
-                      <p className="font-poppins text-sm text-pink-500">
-                        {fabric.description}
-                      </p>
-
-                      {fabric.price > 0 && (
-                        <p className="font-poppins font-semibold text-pink-600 mt-1">
-                          +₹{fabric.price}
-                        </p>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-
-              {/* STEP 3 */}
-              {currentDesign.step === 3 && (
-                <div
-                  className="grid grid-cols-4 md:grid-cols-6 gap-3"
-                  role="listbox"
-                  aria-label="Select color"
-                >
-                  {colors.map(color => (
-                    <motion.button
-                      key={color.id}
-                      onClick={() =>
-                        updateField(
-                          'color',
-                          color.id
-                        )
-                      }
-                      whileHover={{ scale: 1.15 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`color-swatch relative ${
-                        currentDesign.color ===
-                        color.id
-                          ? 'color-swatch-selected'
-                          : ''
-                      }`}
-                      role="option"
-                      aria-selected={
-                        currentDesign.color ===
-                        color.id
-                      }
-                      aria-label={color.name}
-                      style={{
-                        backgroundColor: color.hex
-                      }}
-                    >
-                      {currentDesign.color ===
-                        color.id && (
-                        <Check className="absolute inset-0 flex items-center justify-center text-white text-lg" />
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-
-              {/* STEP 4 */}
-              {currentDesign.step === 4 && (
-                <div
-                  className="space-y-4"
-                  role="listbox"
-                  aria-label="Select embroidery design"
-                >
-                  {embroideryDesigns.map(emb => (
-                    <motion.button
-                      key={emb.id}
-                      onClick={() =>
-                        updateField(
-                          'embroidery',
-                          emb.id
-                        )
-                      }
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      className={`relative p-4 rounded-2xl border-2 transition-all duration-300 flex items-center gap-4 ${
-                        currentDesign.embroidery ===
-                        emb.id
-                          ? 'border-pink-500 bg-pink-50 shadow-lg shadow-pink-200/50'
-                          : 'border-pink-100 hover:border-pink-300 hover:bg-pink-50'
-                      }`}
-                      role="option"
-                      aria-selected={
-                        currentDesign.embroidery ===
-                        emb.id
-                      }
-                    >
-                      <span
-                        className="text-3xl"
-                        role="img"
-                        aria-hidden="true"
-                      >
-                        {emb.icon}
-                      </span>
-
-                      <div className="flex-1 text-left">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-playfair font-bold text-pink-800">
-                            {emb.name}
-                          </h3>
-
-                          <span className="badge badge-pink">
-                            {emb.category}
-                          </span>
-                        </div>
-
-                        <p className="font-poppins text-sm text-pink-500">
-                          Available on:{' '}
-                          {emb.positions
-                            .map(
-                              p =>
-                                positions.find(
-                                  pos =>
-                                    pos.id === p
-                                )?.name
-                            )
-                            .join(', ')}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="font-playfair font-bold text-pink-600">
-                          +₹{emb.price}
-                        </p>
-
-                        {currentDesign.embroidery ===
-                          emb.id && (
-                          <Check className="w-6 h-6 text-pink-500 ml-auto" />
-                        )}
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-
-              {/* STEP 5 */}
-              {currentDesign.step === 5 && (
-                <div
-                  className="relative"
-                  role="listbox"
-                  aria-label="Select embroidery position"
-                >
-                  <div className="relative w-full max-w-md mx-auto aspect-[3/4] bg-gradient-to-b from-pink-50 to-pink-100 rounded-2xl border-2 border-pink-200 overflow-hidden">
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        clipPath: selectedStyle
-                          ? kurtaSilhouettes[
-                              selectedStyle.id
-                            ]
-                          : kurtaSilhouettes.straight
-                      }}
-                    >
-                      <div
-                        className={`absolute inset-0 ${fabricTexture} opacity-30`}
-                      />
-
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          backgroundColor:
-                            selectedColor?.hex
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-white/10" />
-                      </div>
-                    </div>
-
-                    {positions.map(pos => (
+                    return (
                       <motion.button
-                        key={pos.id}
-                        onClick={() => {
-                          if (
-                            selectedEmbroidery?.positions.includes(
-                              pos.id
-                            )
-                          ) {
-                            updateField(
-                              'position',
-                              pos.id
-                            )
-                          }
-                        }}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                        disabled={
-                          !selectedEmbroidery?.positions.includes(
-                            pos.id
-                          )
-                        }
-                        className={`embroidery-position ${
-                          currentDesign.position ===
-                          pos.id
-                            ? 'ring-4 ring-pink-300 scale-125'
-                            : ''
-                        } ${
-                          !selectedEmbroidery?.positions.includes(
-                            pos.id
-                          )
-                            ? 'opacity-30 cursor-not-allowed'
-                            : ''
-                        }`}
-                        style={{
-                          left: `${pos.coords.x}%`,
-                          top: `${pos.coords.y}%`,
-                          transform:
-                            'translate(-50%, -50%)'
-                        }}
-                        data-label={pos.name}
-                        role="option"
-                        aria-selected={
-                          currentDesign.position ===
-                          pos.id
-                        }
-                        aria-disabled={
-                          !selectedEmbroidery?.positions.includes(
-                            pos.id
-                          )
-                        }
+                        type="button"
+                        key={style.id}
+                        onClick={() => updateField('kurtaStyle', style.id)}
+                        whileHover={{ y: -3 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={selectedCard(isSelected)}
+                        aria-pressed={isSelected}
                       >
-                        {currentDesign.position ===
-                          pos.id && (
-                          <Check className="w-4 h-4 text-white" />
-                        )}
-                      </motion.button>
-                    ))}
-
-                    {selectedPosition &&
-                      selectedEmbroidery && (
-                        <motion.div
-                          initial={{
-                            scale: 0,
-                            rotate: -180
-                          }}
-                          animate={{
-                            scale: 1,
-                            rotate: 0
-                          }}
-                          className="absolute"
-                          style={{
-                            left: `${selectedPosition.coords.x}%`,
-                            top: `${selectedPosition.coords.y}%`,
-                            transform:
-                              'translate(-50%, -50%)'
-                          }}
-                        >
-                          <EmbroideryMark
-                            icon={
-                              selectedEmbroidery.icon
-                            }
-                            color={
-                              selectedEmbroideryColor
-                            }
-                            size="text-4xl"
+                        <div className="relative aspect-[3/4] w-full mb-3 rounded-xl overflow-hidden bg-white">
+                          <img
+                            src={kurtaImages[style.id]}
+                            alt={style.name}
+                            loading="lazy"
+                            className="w-full h-full object-contain"
+                            onError={event => {
+                              event.currentTarget.style.display = 'none'
+                              event.currentTarget.parentElement.classList.add(
+                                'bg-pink-50'
+                              )
+                            }}
                           />
-                        </motion.div>
-                      )}
-                  </div>
 
-                  <p className="text-center text-pink-500 font-poppins text-sm mt-4">
-                    Tap on the pink dots to select
-                    embroidery position ✨
-                  </p>
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 bg-pink-500 text-white rounded-full p-1">
+                              <Check className="w-5 h-5" />
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="font-playfair font-bold text-pink-800">
+                          {style.name}
+                        </h3>
+
+                        <p className="font-poppins text-xs md:text-sm text-pink-500 mt-1">
+                          {style.description}
+                        </p>
+
+                        <p className="font-poppins font-semibold text-pink-600 mt-2">
+                          ₹{style.price}
+                        </p>
+                      </motion.button>
+                    )
+                  })}
                 </div>
               )}
 
-              {/* STEP 6 */}
-              {currentDesign.step === 6 && (
-                <div className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h4 className="font-playfair font-bold text-pink-800">
-                        Size & Fit
-                      </h4>
+              {/* STEP 2: FABRIC */}
 
-                      <div
-                        className="flex flex-wrap gap-2"
-                        role="radiogroup"
-                        aria-label="Select size"
+              {currentDesign.step === 2 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {fabrics.map(fabric => {
+                    const isSelected =
+                      currentDesign.fabric === fabric.id
+
+                    return (
+                      <button
+                        type="button"
+                        key={fabric.id}
+                        onClick={() => updateField('fabric', fabric.id)}
+                        className={selectedCard(isSelected)}
+                        aria-pressed={isSelected}
                       >
-                        {sizes.map(size => (
-                          <button
-                            key={size}
-                            onClick={() =>
-                              updateField(
-                                'size',
-                                size
-                              )
-                            }
-                            className={`px-4 py-2 rounded-xl font-poppins font-medium transition-all duration-200 ${
-                              currentDesign.size ===
-                              size
-                                ? 'bg-gradient-pink-dark text-white shadow-md shadow-pink-300/50'
-                                : 'bg-pink-50 text-pink-600 hover:bg-pink-100'
-                            }`}
-                            role="radio"
-                            aria-checked={
-                              currentDesign.size ===
-                              size
-                            }
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* EMBROIDERY COLOR */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-playfair font-bold text-pink-800">
-                          Embroidery Color
-                        </h4>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-5 h-5 rounded-full border-2 border-white shadow ring-1 ring-pink-200"
-                            style={{
-                              backgroundColor:
-                                selectedEmbroideryColor
-                            }}
-                          />
-
-                          <span className="text-xs font-poppins text-pink-500">
-                            {selectedEmbroideryColor}
+                        <div className="aspect-square rounded-xl overflow-hidden mb-3 bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center">
+                          <span className="text-6xl">
+                            {fabric.icon || '🧵'}
                           </span>
                         </div>
-                      </div>
 
-                      <div
-                        className="grid grid-cols-6 gap-3"
-                        role="radiogroup"
-                        aria-label="Select embroidery color"
-                      >
-                        {embroideryColors.map(color => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => {
-                              updateCustomization(
-                                'embroideryColor',
-                                color
-                              )
-                            }}
-                            className={`w-10 h-10 rounded-full border-2 transition-all duration-200 ${
-                              selectedEmbroideryColor ===
-                              color
-                                ? 'border-white ring-2 ring-pink-400 ring-offset-2 shadow-lg scale-110'
-                                : 'border-gray-200 hover:scale-110 hover:ring-2 hover:ring-pink-200'
+                        <h3 className="font-playfair font-bold text-pink-800">
+                          {fabric.name}
+                        </h3>
+
+                        <p className="text-sm text-pink-500 mt-1">
+                          {fabric.description}
+                        </p>
+
+                        <p className="font-semibold text-pink-600 mt-2">
+                          {fabric.price > 0
+                            ? `+₹${fabric.price}`
+                            : 'Included'}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* STEP 3: KURTA COLOR */}
+
+              {currentDesign.step === 3 && (
+                <div>
+                  <p className="text-pink-600 mb-4">
+                    Choose your preferred kurta color.
+                  </p>
+
+                  <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
+                    {colors.map(color => {
+                      const isSelected =
+                        currentDesign.color === color.id
+
+                      return (
+                        <button
+                          type="button"
+                          key={color.id}
+                          onClick={() => updateField('color', color.id)}
+                          className="flex flex-col items-center gap-2"
+                          aria-pressed={isSelected}
+                          title={color.name}
+                        >
+                          <span
+                            className={`w-12 h-12 md:w-14 md:h-14 rounded-full border-2 flex items-center justify-center ${
+                              isSelected
+                                ? 'border-pink-500 ring-4 ring-pink-200'
+                                : 'border-gray-200'
                             }`}
-                            style={{
-                              backgroundColor: color
-                            }}
-                            role="radio"
-                            aria-checked={
-                              selectedEmbroideryColor ===
-                              color
-                            }
-                            aria-label={`Embroidery color ${color}`}
-                            title={color}
+                            style={{ backgroundColor: color.hex }}
                           >
-                            {selectedEmbroideryColor ===
-                              color && (
+                            {isSelected && (
                               <Check
-                                className={`w-5 h-5 mx-auto ${
-                                  color === '#ffffff' ||
-                                  color === '#fbbf24'
+                                className={`w-6 h-6 ${
+                                  ['#ffffff', '#fbbf24', '#fef3c7'].includes(
+                                    color.hex?.toLowerCase()
+                                  )
                                     ? 'text-pink-700'
                                     : 'text-white'
                                 }`}
                               />
                             )}
+                          </span>
+
+                          <span className="text-xs md:text-sm text-pink-700">
+                            {color.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-8">
+                    <h3 className="font-playfair font-bold text-pink-800 mb-3">
+                      Current kurta
+                    </h3>
+
+                    <KurtaPreview
+                      styleId={selectedStyle?.id}
+                      styleName={selectedStyle?.name}
+                      color={selectedColor?.hex}
+                      customizations={currentDesign.customizations}
+                    />
+
+                    <p className="text-xs text-pink-500 text-center mt-2">
+                      The selected color is shown as a subtle overlay.
+                      Exact fabric recoloring needs separate color-mask images.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: EMBROIDERY */}
+
+              {currentDesign.step === 4 && (
+                <div className="space-y-3">
+                  {embroideryDesigns.map(embroidery => {
+                    const isSelected =
+                      currentDesign.embroidery === embroidery.id
+
+                    return (
+                      <button
+                        type="button"
+                        key={embroidery.id}
+                        onClick={() =>
+                          updateField('embroidery', embroidery.id)
+                        }
+                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left ${
+                          isSelected
+                            ? 'border-pink-500 bg-pink-50'
+                            : 'border-pink-100 hover:border-pink-300'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="text-4xl">
+                          {embroidery.icon}
+                        </span>
+
+                        <span className="flex-1">
+                          <span className="block font-playfair font-bold text-pink-800">
+                            {embroidery.name}
+                          </span>
+
+                          <span className="block text-sm text-pink-500">
+                            {embroidery.category}
+                          </span>
+
+                          <span className="block text-xs text-gray-500 mt-1">
+                            Positions:{' '}
+                            {embroidery.positions
+                              .map(id =>
+                                positions.find(position => position.id === id)
+                                  ?.name
+                              )
+                              .filter(Boolean)
+                              .join(', ')}
+                          </span>
+                        </span>
+
+                        <span className="font-semibold text-pink-600">
+                          +₹{embroidery.price}
+                        </span>
+
+                        {isSelected && (
+                          <Check className="w-5 h-5 text-pink-500" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* STEP 5: EMBROIDERY POSITION */}
+
+              {currentDesign.step === 5 && (
+                <div>
+                  <p className="text-pink-600 mb-5">
+                    Select where you want the embroidery.
+                  </p>
+
+                  <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                    {positions
+                      .filter(position =>
+                        selectedEmbroidery?.positions.includes(position.id)
+                      )
+                      .map(position => {
+                        const isSelected =
+                          currentDesign.position === position.id
+
+                        return (
+                          <button
+                            type="button"
+                            key={position.id}
+                            onClick={() =>
+                              updateField('position', position.id)
+                            }
+                            className={`p-4 rounded-xl border-2 text-left ${
+                              isSelected
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-pink-100 hover:border-pink-300'
+                            }`}
+                            aria-pressed={isSelected}
+                          >
+                            <span className="flex items-center justify-between">
+                              <span className="font-semibold text-pink-800">
+                                📍 {position.name}
+                              </span>
+
+                              {isSelected && (
+                                <Check className="w-5 h-5 text-pink-500" />
+                              )}
+                            </span>
                           </button>
-                        ))}
-                      </div>
+                        )
+                      })}
+                  </div>
 
-                      {/* LIVE EMBROIDERY COLOR PREVIEW */}
-                      {selectedEmbroidery && (
-                        <div className="mt-4 p-4 rounded-2xl bg-pink-50 border border-pink-100 flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                            <EmbroideryMark
-                              icon={
-                                selectedEmbroidery.icon
-                              }
-                              color={
-                                selectedEmbroideryColor
-                              }
-                              size="text-4xl"
-                            />
-                          </div>
+                  <KurtaPreview
+                    styleId={selectedStyle?.id}
+                    styleName={selectedStyle?.name}
+                    color={selectedColor?.hex}
+                    selectedEmbroidery={selectedEmbroidery}
+                    selectedPosition={selectedPosition}
+                    embroideryColor={selectedEmbroideryColor}
+                    customizations={currentDesign.customizations}
+                    large
+                  />
 
-                          <div>
-                            <p className="font-playfair font-bold text-pink-800">
-                              {selectedEmbroidery.name}
-                            </p>
+                  <p className="text-xs text-center text-pink-500 mt-3">
+                    Embroidery positions are approximate preview locations.
+                  </p>
+                </div>
+              )}
 
-                            <p className="font-poppins text-sm text-pink-500">
-                              Embroidery color preview
-                            </p>
-                          </div>
-                        </div>
-                      )}
+              {/* STEP 6: CUSTOMIZE */}
+
+              {currentDesign.step === 6 && (
+                <div className="space-y-8">
+                  {/* SIZE */}
+
+                  <div>
+                    <h3 className="font-playfair font-bold text-pink-800 mb-4">
+                      Size & Fit
+                    </h3>
+
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map(size => (
+                        <button
+                          type="button"
+                          key={size}
+                          onClick={() => updateField('size', size)}
+                          className={`px-4 py-2 rounded-xl font-medium ${
+                            currentDesign.size === size
+                              ? 'bg-pink-500 text-white'
+                              : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
+                          }`}
+                          aria-pressed={currentDesign.size === size}
+                        >
+                          {size}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-playfair font-bold text-pink-800">
-                      Transform Embroidery
-                    </h4>
+                  {/* EMBROIDERY COLOR */}
 
-                    <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <h3 className="font-playfair font-bold text-pink-800 mb-4">
+                      Embroidery Color
+                    </h3>
+
+                    <div className="grid grid-cols-6 gap-3">
+                      {embroideryColors.map(color => (
+                        <button
+                          type="button"
+                          key={color}
+                          onClick={() =>
+                            updateCustomization('embroideryColor', color)
+                          }
+                          className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
+                            selectedEmbroideryColor === color
+                              ? 'border-pink-500 ring-2 ring-pink-200'
+                              : 'border-gray-200'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Embroidery color ${color}`}
+                          aria-pressed={selectedEmbroideryColor === color}
+                        >
+                          {selectedEmbroideryColor === color && (
+                            <Check
+                              className={`w-5 h-5 ${
+                                color === '#ffffff' ||
+                                color === '#fbbf24'
+                                  ? 'text-pink-700'
+                                  : 'text-white'
+                              }`}
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* EMBROIDERY SIZE AND POSITION */}
+
+                  <div>
+                    <h3 className="font-playfair font-bold text-pink-800 mb-4">
+                      Transform Embroidery
+                    </h3>
+
+                    <div className="grid sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="input-label">
-                          Scale
+                        <label className="block text-sm text-pink-700 mb-2">
+                          Scale: {Number(
+                            currentDesign.customizations?.scale ?? 1
+                          ).toFixed(1)}x
                         </label>
 
                         <input
@@ -947,32 +881,20 @@ export function DesignStudio() {
                           min="0.5"
                           max="2"
                           step="0.1"
-                          value={
-                            currentDesign.customizations
-                              .scale
-                          }
-                          onChange={e =>
+                          value={currentDesign.customizations?.scale ?? 1}
+                          onChange={event =>
                             updateCustomization(
                               'scale',
-                              parseFloat(
-                                e.target.value
-                              )
+                              Number(event.target.value)
                             )
                           }
-                          className="w-full h-2 bg-pink-100 rounded-lg appearance-none accent-pink-500"
+                          className="w-full accent-pink-500"
                         />
-
-                        <p className="font-poppins text-sm text-pink-500 mt-1">
-                          {currentDesign.customizations.scale.toFixed(
-                            1
-                          )}
-                          x
-                        </p>
                       </div>
 
                       <div>
-                        <label className="input-label">
-                          Rotation
+                        <label className="block text-sm text-pink-700 mb-2">
+                          Rotation: {currentDesign.customizations?.rotation ?? 0}°
                         </label>
 
                         <input
@@ -980,583 +902,372 @@ export function DesignStudio() {
                           min="-180"
                           max="180"
                           step="5"
-                          value={
-                            currentDesign.customizations
-                              .rotation
-                          }
-                          onChange={e =>
+                          value={currentDesign.customizations?.rotation ?? 0}
+                          onChange={event =>
                             updateCustomization(
                               'rotation',
-                              parseInt(
-                                e.target.value
-                              )
+                              Number(event.target.value)
                             )
                           }
-                          className="w-full h-2 bg-pink-100 rounded-lg appearance-none accent-pink-500"
+                          className="w-full accent-pink-500"
                         />
-
-                        <p className="font-poppins text-sm text-pink-500 mt-1">
-                          {
-                            currentDesign
-                              .customizations
-                              .rotation
-                          }
-                          °
-                        </p>
                       </div>
 
                       <div>
-                        <label className="input-label">
-                          X Position
+                        <label className="block text-sm text-pink-700 mb-2">
+                          Horizontal Position
                         </label>
 
                         <input
                           type="range"
-                          min="-50"
-                          max="50"
+                          min="-30"
+                          max="30"
                           step="1"
-                          value={
-                            currentDesign.customizations
-                              .x
-                          }
-                          onChange={e =>
+                          value={currentDesign.customizations?.x ?? 0}
+                          onChange={event =>
                             updateCustomization(
                               'x',
-                              parseInt(
-                                e.target.value
-                              )
+                              Number(event.target.value)
                             )
                           }
-                          className="w-full h-2 bg-pink-100 rounded-lg appearance-none accent-pink-500"
+                          className="w-full accent-pink-500"
                         />
-
-                        <p className="font-poppins text-sm text-pink-500 mt-1">
-                          {
-                            currentDesign
-                              .customizations.x
-                          }
-                          %
-                        </p>
                       </div>
 
                       <div>
-                        <label className="input-label">
-                          Y Position
+                        <label className="block text-sm text-pink-700 mb-2">
+                          Vertical Position
                         </label>
 
                         <input
                           type="range"
-                          min="-50"
-                          max="50"
+                          min="-30"
+                          max="30"
                           step="1"
-                          value={
-                            currentDesign.customizations
-                              .y
-                          }
-                          onChange={e =>
+                          value={currentDesign.customizations?.y ?? 0}
+                          onChange={event =>
                             updateCustomization(
                               'y',
-                              parseInt(
-                                e.target.value
-                              )
+                              Number(event.target.value)
                             )
                           }
-                          className="w-full h-2 bg-pink-100 rounded-lg appearance-none accent-pink-500"
+                          className="w-full accent-pink-500"
                         />
-
-                        <p className="font-poppins text-sm text-pink-500 mt-1">
-                          {
-                            currentDesign
-                              .customizations.y
-                          }
-                          %
-                        </p>
                       </div>
                     </div>
+                  </div>
+
+                  {/* LIVE PREVIEW */}
+
+                  <div>
+                    <h3 className="font-playfair font-bold text-pink-800 mb-4">
+                      Live Preview
+                    </h3>
+
+                    <KurtaPreview
+                      styleId={selectedStyle?.id}
+                      styleName={selectedStyle?.name}
+                      color={selectedColor?.hex}
+                      selectedEmbroidery={selectedEmbroidery}
+                      selectedPosition={selectedPosition}
+                      embroideryColor={selectedEmbroideryColor}
+                      customizations={currentDesign.customizations}
+                      large
+                    />
                   </div>
                 </div>
               )}
 
-              {/* STEP 7 */}
+              {/* STEP 7: FINAL PREVIEW */}
+
               {currentDesign.step === 7 && (
                 <div className="space-y-6">
-                  <div className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl border-2 border-pink-200 overflow-hidden">
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        clipPath: selectedStyle
-                          ? kurtaSilhouettes[
-                              selectedStyle.id
-                            ]
-                          : kurtaSilhouettes.straight
-                      }}
-                    >
-                      <div
-                        className={`absolute inset-0 ${fabricTexture} opacity-30`}
-                      />
+                  <KurtaPreview
+                    styleId={selectedStyle?.id}
+                    styleName={selectedStyle?.name}
+                    color={selectedColor?.hex}
+                    selectedEmbroidery={selectedEmbroidery}
+                    selectedPosition={selectedPosition}
+                    embroideryColor={selectedEmbroideryColor}
+                    customizations={currentDesign.customizations}
+                    large
+                  />
 
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          backgroundColor:
-                            selectedColor?.hex
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-white/10" />
-                      </div>
-                    </div>
-
-                    {selectedPosition &&
-                      selectedEmbroidery && (
-                        <motion.div
-                          initial={{
-                            scale: 0,
-                            rotate: -180
-                          }}
-                          animate={{
-                            scale: 1,
-                            rotate: 0
-                          }}
-                          className="absolute"
-                          style={{
-                            left: `calc(${selectedPosition.coords.x}% + ${currentDesign.customizations.x}%)`,
-                            top: `calc(${selectedPosition.coords.y}% + ${currentDesign.customizations.y}%)`,
-                            transform: `translate(-50%, -50%) scale(${currentDesign.customizations.scale}) rotate(${currentDesign.customizations.rotation}deg)`
-                          }}
-                        >
-                          <EmbroideryMark
-                            icon={
-                              selectedEmbroidery.icon
-                            }
-                            color={
-                              selectedEmbroideryColor
-                            }
-                            size="text-5xl"
-                          />
-                        </motion.div>
-                      )}
-
-                    <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-                      <button
-                        onClick={() =>
-                          setShowPreview(!showPreview)
-                        }
-                        className="btn-secondary flex-1"
-                      >
-                        {showPreview ? (
-                          <Minimize2 className="w-4 h-4 mr-1" />
-                        ) : (
-                          <Maximize2 className="w-4 h-4 mr-1" />
-                        )}
-
-                        {showPreview
-                          ? 'Exit Preview'
-                          : 'Full Preview'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="card p-4 text-center">
-                      <span
-                        className="text-2xl block mb-1"
-                        role="img"
-                        aria-hidden="true"
-                      >
-                        💰
-                      </span>
-
-                      <p className="font-poppins text-sm text-pink-500">
-                        Base Price
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
+                        Kurta
                       </p>
 
-                      <p className="font-playfair text-xl font-bold text-pink-700">
-                        ₹{price.basePrice}
+                      <p className="font-bold text-pink-800">
+                        {selectedStyle?.name || 'Not selected'}
                       </p>
                     </div>
 
-                    <div className="card p-4 text-center">
-                      <span
-                        className="text-2xl block mb-1"
-                        role="img"
-                        aria-hidden="true"
-                      >
-                        🧵
-                      </span>
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
+                        Fabric
+                      </p>
 
-                      <p className="font-poppins text-sm text-pink-500">
+                      <p className="font-bold text-pink-800">
+                        {selectedFabric?.name || 'Not selected'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
+                        Size
+                      </p>
+
+                      <p className="font-bold text-pink-800">
+                        {currentDesign.size || 'M'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
                         Embroidery
                       </p>
 
-                      <p className="font-playfair text-xl font-bold text-pink-700">
-                        ₹
-                        {price.embroideryPrice +
-                          price.fabricPrice}
+                      <p className="font-bold text-pink-800">
+                        {selectedEmbroidery?.name || 'Not selected'}
                       </p>
                     </div>
 
-                    <div className="card p-4 text-center bg-gradient-pink-dark">
-                      <span
-                        className="text-2xl block mb-1"
-                        role="img"
-                        aria-hidden="true"
-                      >
-                        ✨
-                      </span>
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
+                        Position
+                      </p>
 
-                      <p className="font-poppins text-sm text-pink-100">
+                      <p className="font-bold text-pink-800">
+                        {selectedPosition?.name || 'Not selected'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-pink-50 p-4">
+                      <p className="text-sm text-pink-500">
                         Total Price
                       </p>
 
-                      <p className="font-playfair text-2xl font-bold text-white">
+                      <p className="font-bold text-pink-700 text-xl">
                         ₹{price.total}
                       </p>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    className="btn-secondary w-full"
+                  >
+                    <Maximize2 className="w-4 h-4 inline mr-2" />
+                    Open Full Preview
+                  </button>
                 </div>
               )}
-            </motion.div>
+            </motion.section>
           </AnimatePresence>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.2,
-              duration: 0.5
-            }}
-            className="flex items-center justify-between"
-          >
+          {/* NAVIGATION */}
+
+          <div className="flex items-center justify-between gap-3">
             <button
+              type="button"
               onClick={handlePrev}
               disabled={currentDesign.step === 1}
-              className="btn-secondary"
+              className="btn-secondary disabled:opacity-40"
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
+              <ChevronLeft className="w-4 h-4 inline mr-1" />
               Back
             </button>
 
-            <div className="flex gap-3">
-              {currentDesign.step < 7 && (
+            <span className="text-sm text-pink-500">
+              Step {currentDesign.step} of 7
+            </span>
+
+            {currentDesign.step < 7 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="btn-primary disabled:opacity-40"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 inline ml-1" />
+              </button>
+            ) : (
+              <div className="flex gap-2">
                 <button
-                  onClick={handleNext}
-                  disabled={!canProceed()}
+                  type="button"
+                  onClick={() => setShowSaveModal(true)}
+                  className="btn-secondary"
+                >
+                  <Save className="w-4 h-4 inline mr-1" />
+                  Save
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
                   className="btn-primary"
                 >
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-2" />
+                  <Heart className="w-4 h-4 inline mr-1" />
+                  Cart
                 </button>
-              )}
-
-              {currentDesign.step === 7 && (
-                <>
-                  <button
-                    onClick={() =>
-                      setShowSaveModal(true)
-                    }
-                    className="btn-secondary"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Design
-                  </button>
-
-                  <button
-                    onClick={handleAddToCart}
-                    className="btn-primary"
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Add to Cart
-                  </button>
-                </>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* RIGHT SIDEBAR */}
-        <motion.aside
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{
-            delay: 0.1,
-            duration: 0.5
-          }}
-          className="space-y-6"
-        >
-          <div className="card-elevated p-6 sticky top-24">
-            <h3 className="font-playfair text-xl font-bold text-pink-800 mb-4 flex items-center gap-2">
-              <span
-                className="text-xl"
-                role="img"
-                aria-hidden="true"
-              >
-                💰
-              </span>
-              Price Summary
+
+        <aside className="space-y-6">
+          <div className="card-elevated p-5 lg:sticky lg:top-24">
+            <h3 className="font-playfair text-xl font-bold text-pink-800 mb-5">
+              💰 Price Summary
             </h3>
 
-            <div className="space-y-3 text-sm font-poppins">
-              <div className="flex justify-between text-gray-600">
-                <span>Kurta Base</span>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-600">
+                  Kurta Base
+                </span>
 
-                <span className="font-medium text-pink-700">
+                <span className="font-semibold text-pink-700">
                   ₹{price.basePrice}
                 </span>
               </div>
 
-              <div className="flex justify-between text-gray-600">
-                <span>
-                  Fabric (
-                  {selectedFabric?.name || 'Select'})
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-600">
+                  Fabric
                 </span>
 
-                <span className="font-medium text-pink-700">
+                <span className="font-semibold text-pink-700">
                   +₹{price.fabricPrice}
                 </span>
               </div>
 
-              <div className="flex justify-between text-gray-600">
-                <span>
-                  Embroidery (
-                  {selectedEmbroidery?.name ||
-                    'Select'}
-                  )
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-600">
+                  Embroidery
                 </span>
 
-                <span className="font-medium text-pink-700">
+                <span className="font-semibold text-pink-700">
                   +₹{price.embroideryPrice}
                 </span>
               </div>
 
-              <div className="flex justify-between text-gray-600">
-                <span>Customization</span>
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-600">
+                  Customization
+                </span>
 
-                <span className="font-medium text-pink-700">
+                <span className="font-semibold text-pink-700">
                   +₹{price.customizationPrice}
                 </span>
               </div>
 
-              <div className="border-t border-pink-100 pt-3 flex justify-between">
-                <span className="font-playfair font-bold text-pink-800">
+              <div className="border-t border-pink-100 pt-4 flex justify-between gap-2">
+                <span className="font-bold text-pink-800">
                   Total
                 </span>
 
-                <span className="font-playfair text-xl font-bold bg-gradient-pink-dark bg-clip-text text-transparent">
+                <span className="font-playfair font-bold text-xl text-pink-700">
                   ₹{price.total}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="card-elevated p-6">
-            <h3 className="font-playfair text-xl font-bold text-pink-800 mb-4 flex items-center gap-2">
-              <span
-                className="text-xl"
-                role="img"
-                aria-hidden="true"
-              >
-                💡
-              </span>
-              Design Tips
+          <div className="card-elevated p-5">
+            <h3 className="font-playfair text-xl font-bold text-pink-800 mb-4">
+              💡 Design Tips
             </h3>
 
-            <ul className="space-y-3 text-sm font-poppins text-pink-600">
-              <li className="flex items-start gap-2">
-                ✨ Light fabrics (cotton, linen) work
-                best for daily wear
-              </li>
-
-              <li className="flex items-start gap-2">
-                🌸 Floral embroidery suits all kurta
-                styles
-              </li>
-
-              <li className="flex items-start gap-2">
-                💎 Bridal embroidery looks stunning on
-                silk & chanderi
-              </li>
-
-              <li className="flex items-start gap-2">
-                🎨 Contrast embroidery colors pop
-                beautifully
-              </li>
-
-              <li className="flex items-start gap-2">
-                📍 Neck & chest positions are most
-                popular
-              </li>
-
-              <li className="flex items-start gap-2">
-                👗 Anarkali style flatters all body
-                types
-              </li>
+            <ul className="space-y-3 text-sm text-pink-600">
+              <li>✨ Cotton works well for everyday wear.</li>
+              <li>🌸 Floral embroidery suits many styles.</li>
+              <li>💎 Contrast embroidery adds visual detail.</li>
+              <li>📍 Neck and chest are popular positions.</li>
+              <li>👗 Choose the style before selecting fabric.</li>
             </ul>
           </div>
-        </motion.aside>
+        </aside>
       </div>
 
       {/* FULL PREVIEW MODAL */}
+
       <AnimatePresence>
         {showPreview && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3"
             onClick={() => setShowPreview(false)}
           >
             <motion.div
-              initial={{
-                scale: 0.9,
-                opacity: 0
-              }}
-              animate={{
-                scale: 1,
-                opacity: 1
-              }}
-              exit={{
-                scale: 0.9,
-                opacity: 0
-              }}
-              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl"
-              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-3xl p-5 md:p-7"
+              onClick={event => event.stopPropagation()}
             >
-              <div className="p-6 border-b border-pink-100 flex items-center justify-between">
+              <div className="flex items-center justify-between mb-5">
                 <h2 className="font-playfair text-2xl font-bold text-pink-800">
-                  Final Preview 👁️
+                  Final Preview 👗
                 </h2>
 
                 <button
-                  onClick={() =>
-                    setShowPreview(false)
-                  }
-                  className="p-2 rounded-xl text-pink-500 hover:bg-pink-100"
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 rounded-xl hover:bg-pink-50 text-pink-600"
+                  aria-label="Close preview"
                 >
-                  ✕
+                  <Minimize2 className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6">
-                <div className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl border-2 border-pink-200 overflow-hidden mb-6">
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      clipPath: selectedStyle
-                        ? kurtaSilhouettes[
-                            selectedStyle.id
-                          ]
-                        : kurtaSilhouettes.straight
-                    }}
-                  >
-                    <div
-                      className={`absolute inset-0 ${fabricTexture} opacity-30`}
-                    />
+              <KurtaPreview
+                styleId={selectedStyle?.id}
+                styleName={selectedStyle?.name}
+                color={selectedColor?.hex}
+                selectedEmbroidery={selectedEmbroidery}
+                selectedPosition={selectedPosition}
+                embroideryColor={selectedEmbroideryColor}
+                customizations={currentDesign.customizations}
+                large
+              />
 
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        backgroundColor:
-                          selectedColor?.hex
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-white/10" />
-                    </div>
-                  </div>
+              <div className="text-center mt-5">
+                <p className="font-playfair text-2xl font-bold text-pink-700">
+                  ₹{price.total}
+                </p>
 
-                  {selectedPosition &&
-                    selectedEmbroidery && (
-                      <motion.div
-                        animate={{
-                          scale: [1, 1.05, 1]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity
-                        }}
-                        className="absolute"
-                        style={{
-                          left: `calc(${selectedPosition.coords.x}% + ${currentDesign.customizations.x}%)`,
-                          top: `calc(${selectedPosition.coords.y}% + ${currentDesign.customizations.y}%)`,
-                          transform: `translate(-50%, -50%) scale(${currentDesign.customizations.scale}) rotate(${currentDesign.customizations.rotation}deg)`
-                        }}
-                      >
-                        <EmbroideryMark
-                          icon={
-                            selectedEmbroidery.icon
-                          }
-                          color={
-                            selectedEmbroideryColor
-                          }
-                          size="text-6xl"
-                        />
-                      </motion.div>
-                    )}
-                </div>
+                <p className="text-sm text-pink-500 mt-1">
+                  Size: {currentDesign.size || 'M'}
+                </p>
+              </div>
 
-                <div className="grid md:grid-cols-3 gap-4 mb-6">
-                  <div className="card p-4">
-                    <p className="font-poppins text-sm text-pink-500">
-                      Style
-                    </p>
+              <div className="flex gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(true)}
+                  className="btn-secondary flex-1"
+                >
+                  <Save className="w-4 h-4 inline mr-1" />
+                  Save
+                </button>
 
-                    <p className="font-playfair font-bold text-pink-800">
-                      {selectedStyle?.name ||
-                        'Not selected'}
-                    </p>
-                  </div>
-
-                  <div className="card p-4">
-                    <p className="font-poppins text-sm text-pink-500">
-                      Fabric
-                    </p>
-
-                    <p className="font-playfair font-bold text-pink-800">
-                      {selectedFabric?.name ||
-                        'Not selected'}
-                    </p>
-                  </div>
-
-                  <div className="card p-4">
-                    <p className="font-poppins text-sm text-pink-500">
-                      Color
-                    </p>
-
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-6 h-6 rounded-full border"
-                        style={{
-                          backgroundColor:
-                            selectedColor?.hex
-                        }}
-                      />
-
-                      <span className="font-playfair font-bold text-pink-800 capitalize">
-                        {selectedColor?.name ||
-                          'Not selected'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() =>
-                      setShowSaveModal(true)
-                    }
-                    className="btn-secondary flex-1"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Design
-                  </button>
-
-                  <button
-                    onClick={handleAddToCart}
-                    className="btn-primary flex-1"
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Add to Cart
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="btn-primary flex-1"
+                >
+                  <Heart className="w-4 h-4 inline mr-1" />
+                  Add to Cart
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -1564,62 +1275,58 @@ export function DesignStudio() {
       </AnimatePresence>
 
       {/* SAVE DESIGN MODAL */}
+
       <AnimatePresence>
         {showSaveModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() =>
-              setShowSaveModal(false)
-            }
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowSaveModal(false)}
           >
             <motion.div
-              initial={{
-                scale: 0.9,
-                opacity: 0
-              }}
-              animate={{
-                scale: 1,
-                opacity: 1
-              }}
-              exit={{
-                scale: 0.9,
-                opacity: 0
-              }}
-              className="relative w-full max-w-md bg-white rounded-3xl p-6"
-              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-md"
+              onClick={event => event.stopPropagation()}
             >
-              <h2 className="font-playfair text-2xl font-bold text-pink-800 mb-4 text-center">
+              <h2 className="font-playfair text-2xl font-bold text-pink-800 text-center mb-5">
                 Save Your Design 💖
               </h2>
+
+              <label className="block text-sm font-medium text-pink-700 mb-2">
+                Design name
+              </label>
 
               <input
                 type="text"
                 value={saveName}
-                onChange={e =>
-                  setSaveName(e.target.value)
-                }
-                placeholder="Enter design name..."
-                className="input-field mb-4"
+                onChange={event => setSaveName(event.target.value)}
+                placeholder="e.g. Pink Floral Kurta"
+                className="input-field w-full mb-5"
                 autoFocus
               />
 
               <div className="flex gap-3">
                 <button
-                  onClick={() =>
+                  type="button"
+                  onClick={() => {
                     setShowSaveModal(false)
-                  }
+                    setSaveName('')
+                  }}
                   className="btn-secondary flex-1"
                 >
                   Cancel
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleSaveDesign}
                   className="btn-primary flex-1"
                 >
+                  <Save className="w-4 h-4 inline mr-1" />
                   Save Design
                 </button>
               </div>
