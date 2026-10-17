@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDesign } from '../context/DesignContext'
 import { useCart } from '../context/CartContext'
@@ -29,6 +29,126 @@ const kurtaImages = {
   western: '/kurtas/kurta-collection6.png'
 }
 
+// --------------------------------------------------
+// RECOLOUR KURTA PNG
+// Preserves transparency and original shading.
+// --------------------------------------------------
+
+function useRecoloredKurta(imagePath, color) {
+  const [recoloredImage, setRecoloredImage] = useState('')
+  const [imageError, setImageError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    let generatedUrl = ''
+
+    setRecoloredImage('')
+    setImageError(false)
+
+    if (!imagePath) {
+      setImageError(true)
+      return
+    }
+
+    const image = new Image()
+
+    image.onload = () => {
+      if (cancelled) return
+
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = image.naturalWidth
+        canvas.height = image.naturalHeight
+
+        const ctx = canvas.getContext('2d', {
+          willReadFrequently: true
+        })
+
+        if (!ctx) {
+          throw new Error('Canvas is unavailable')
+        }
+
+        ctx.drawImage(image, 0, 0)
+
+        const imageData = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        )
+
+        const pixels = imageData.data
+
+        const validHex = /^#([0-9a-f]{6})$/i.test(color || '')
+        const hex = validHex ? color : '#ffffff'
+
+        const targetR = parseInt(hex.slice(1, 3), 16)
+        const targetG = parseInt(hex.slice(3, 5), 16)
+        const targetB = parseInt(hex.slice(5, 7), 16)
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const alpha = pixels[i + 3]
+
+          // Keep the transparent background transparent.
+          if (alpha === 0) continue
+
+          const r = pixels[i]
+          const g = pixels[i + 1]
+          const b = pixels[i + 2]
+
+          // Preserve the shading of a white garment.
+          const brightness =
+            (r * 0.299 + g * 0.587 + b * 0.114) / 255
+
+          // Maintain enough brightness to show fabric details.
+          const shade = 0.35 + brightness * 0.65
+
+          pixels[i] = Math.min(255, Math.round(targetR * shade))
+          pixels[i + 1] = Math.min(255, Math.round(targetG * shade))
+          pixels[i + 2] = Math.min(255, Math.round(targetB * shade))
+        }
+
+        ctx.putImageData(imageData, 0, 0)
+
+        canvas.toBlob(blob => {
+          if (!blob || cancelled) return
+
+          generatedUrl = URL.createObjectURL(blob)
+          setRecoloredImage(generatedUrl)
+        }, 'image/png')
+      } catch (error) {
+        console.error('Kurta recolouring failed:', error)
+
+        if (!cancelled) {
+          setImageError(true)
+        }
+      }
+    }
+
+    image.onerror = () => {
+      if (!cancelled) {
+        setImageError(true)
+      }
+    }
+
+    image.src = imagePath
+
+    return () => {
+      cancelled = true
+
+      if (generatedUrl) {
+        URL.revokeObjectURL(generatedUrl)
+      }
+    }
+  }, [imagePath, color])
+
+  return { recoloredImage, imageError }
+}
+
+// --------------------------------------------------
+// DESIGN STEPS
+// --------------------------------------------------
+
 const steps = [
   { id: 1, label: 'Kurta Style', icon: '👗' },
   { id: 2, label: 'Fabric', icon: '☁️' },
@@ -38,6 +158,10 @@ const steps = [
   { id: 6, label: 'Customize', icon: '✨' },
   { id: 7, label: 'Preview', icon: '👁️' }
 ]
+
+// --------------------------------------------------
+// EMBROIDERY COLORS
+// --------------------------------------------------
 
 const embroideryColors = [
   '#ec4899',
@@ -54,8 +178,9 @@ const embroideryColors = [
   '#0d9488'
 ]
 
-// CSS filters for a simple embroidery color effect.
-// Emoji colors may vary between browsers and operating systems.
+// --------------------------------------------------
+// EMBROIDERY COLOR FILTER
+// --------------------------------------------------
 
 const hexToFilter = hex => {
   const filters = {
@@ -73,7 +198,7 @@ const hexToFilter = hex => {
     '#0d9488': 'hue-rotate(120deg) saturate(2)'
   }
 
-  return filters[hex] || 'none'
+  return filters[hex?.toLowerCase()] || 'none'
 }
 
 function EmbroideryMark({ icon, color, size = 'text-4xl' }) {
@@ -91,7 +216,138 @@ function EmbroideryMark({ icon, color, size = 'text-4xl' }) {
     </span>
   )
 }
+// --------------------------------------------------
+// CREATE A COMBINED CUSTOMIZED KURTA IMAGE
+// --------------------------------------------------
 
+async function createCustomizedKurtaImage({
+  imagePath,
+  color,
+  embroideryIcon,
+  embroideryColor,
+  position,
+  customizations,
+  styleName
+}) {
+  const loadImage = src =>
+    new Promise((resolve, reject) => {
+      const image = new Image()
+
+      image.onload = () => resolve(image)
+      image.onerror = () =>
+        reject(new Error(`Could not load image: ${src}`))
+
+      image.src = src
+    })
+
+  const image = await loadImage(imagePath)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 600
+  canvas.height = 800
+
+  const ctx = canvas.getContext('2d')
+
+  if (!ctx) {
+    throw new Error('Could not create preview canvas.')
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  // Draw kurta while preserving its transparent background.
+  const scale = Math.min(
+    canvas.width / image.width,
+    canvas.height / image.height
+  )
+
+  const width = image.width * scale
+  const height = image.height * scale
+  const left = (canvas.width - width) / 2
+  const top = (canvas.height - height) / 2
+
+  ctx.drawImage(image, left, top, width, height)
+
+  // Recolour the garment while preserving shading.
+  const imageData = ctx.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  )
+
+  const pixels = imageData.data
+  const hex = /^#[0-9a-f]{6}$/i.test(color || '')
+    ? color
+    : '#ffffff'
+
+  const targetR = parseInt(hex.slice(1, 3), 16)
+  const targetG = parseInt(hex.slice(3, 5), 16)
+  const targetB = parseInt(hex.slice(5, 7), 16)
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] === 0) continue
+
+    const brightness =
+      (pixels[i] * 0.299 +
+        pixels[i + 1] * 0.587 +
+        pixels[i + 2] * 0.114) /
+      255
+
+    const shade = 0.35 + brightness * 0.65
+
+    pixels[i] = Math.round(targetR * shade)
+    pixels[i + 1] = Math.round(targetG * shade)
+    pixels[i + 2] = Math.round(targetB * shade)
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+
+  // Add embroidery at the selected position.
+  if (embroideryIcon && position?.coords) {
+    const x = Number(customizations?.x ?? 0)
+    const y = Number(customizations?.y ?? 0)
+    const size = 48 * Number(customizations?.scale ?? 1)
+    const rotation = Number(customizations?.rotation ?? 0)
+
+    const px = canvas.width * (
+      Number(position.coords.x) + x
+    ) / 100
+
+    const py = canvas.height * (
+      Number(position.coords.y) + y
+    ) / 100
+
+    ctx.save()
+    ctx.translate(px, py)
+    ctx.rotate((rotation * Math.PI) / 180)
+    ctx.font = `${size}px sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = embroideryColor || '#ec4899'
+    ctx.fillText(embroideryIcon, 0, 0)
+    ctx.restore()
+  }
+
+  // Add the kurta name at the bottom.
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'
+  ctx.fillRect(20, 750, 560, 35)
+
+  ctx.fillStyle = '#831843'
+  ctx.font = 'bold 20px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText(styleName || 'Your Kurta', 300, 774)
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (!blob) {
+        reject(new Error('Could not generate the kurta preview.'))
+        return
+      }
+
+      resolve(blob)
+    }, 'image/png')
+  })
+}
 // --------------------------------------------------
 // REUSABLE KURTA PREVIEW
 // --------------------------------------------------
@@ -108,16 +364,15 @@ function KurtaPreview({
 }) {
   const imagePath = kurtaImages[styleId]
 
-  const [imageError, setImageError] = useState(false)
+  const { recoloredImage, imageError } = useRecoloredKurta(
+    imagePath,
+    color || '#ffffff'
+  )
 
-  useEffect(() => {
-    setImageError(false)
-  }, [imagePath])
-
-  const x = Number(customizations?.x || 0)
-  const y = Number(customizations?.y || 0)
-  const scale = Number(customizations?.scale || 1)
-  const rotation = Number(customizations?.rotation || 0)
+  const x = Number(customizations?.x ?? 0)
+  const y = Number(customizations?.y ?? 0)
+  const scale = Number(customizations?.scale ?? 1)
+  const rotation = Number(customizations?.rotation ?? 0)
 
   return (
     <div
@@ -127,12 +382,13 @@ function KurtaPreview({
     >
       {!imageError ? (
         <img
-          src={imagePath}
+          src={recoloredImage || imagePath}
           alt={styleName || 'Selected kurta'}
           className="absolute inset-0 w-full h-full object-contain"
-          onError={() => {
-            setImageError(true)
-            console.error('Kurta image not found:', imagePath)
+          onError={event => {
+            if (event.currentTarget.src === imagePath) {
+              console.error('Kurta image not found:', imagePath)
+            }
           }}
         />
       ) : (
@@ -149,20 +405,8 @@ function KurtaPreview({
         </div>
       )}
 
-      {/* Color overlay is deliberately subtle.
-          It does not perfectly recolor the original image. */}
-      {color && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundColor: color,
-            opacity: 0.08,
-            mixBlendMode: 'multiply'
-          }}
-        />
-      )}
+      {/* EMBROIDERY PREVIEW */}
 
-      {/* Embroidery preview */}
       {selectedEmbroidery && selectedPosition && (
         <motion.div
           key={`${selectedEmbroidery.id}-${selectedPosition.id}`}
@@ -183,6 +427,8 @@ function KurtaPreview({
           />
         </motion.div>
       )}
+
+      {/* KURTA NAME */}
 
       <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-white/90 backdrop-blur-sm p-2 text-center">
         <p className="font-semibold text-pink-800">
@@ -329,60 +575,110 @@ export function DesignStudio() {
   // ADD TO CART
   // ------------------------------------------------
 
-  const handleAddToCart = async () => {
-    if (!user) {
-      toast.error('Please login to add your design to cart.')
-      return
-    }
-
-    if (!selectedStyle) {
-      toast.error('Please select a kurta first.')
-      return
-    }
-
-    try {
-      const savedDesign = await saveDesign(
-        `${selectedStyle.name} Custom Design`
-      )
-
-      if (!savedDesign?.id) {
-        throw new Error(
-          'Could not get the saved design ID. Please try again.'
-        )
-      }
-
-      const result = await addToCart(
-        savedDesign.id,
-        1,
-        currentDesign.size || 'M'
-      )
-
-      if (result?.error) {
-        throw result.error
-      }
-
-      toast.success('Your custom kurta was added to cart!')
-    } catch (error) {
-      console.error('Add to cart error:', error)
-
-      toast.error(
-        error?.message || 'Failed to add your design to cart.'
-      )
-    }
+ const handleAddToCart = async () => {
+  if (!user) {
+    toast.error('Please login to add your design to cart.')
+    return
   }
+
+  if (!selectedStyle) {
+    toast.error('Please select a kurta first.')
+    return
+  }
+
+  try {
+    toast.loading('Preparing your customized kurta...', {
+      id: 'custom-kurta-cart'
+    })
+
+    // Generate a PNG containing the selected kurta colour
+    // and embroidery.
+    const previewBlob = await createCustomizedKurtaImage({
+      imagePath: kurtaImages[selectedStyle.id],
+      color: selectedColor?.hex || '#ffffff',
+      embroideryIcon: selectedEmbroidery?.icon,
+      embroideryColor: selectedEmbroideryColor,
+      position: selectedPosition,
+      customizations: currentDesign.customizations,
+      styleName: selectedStyle.name
+    })
+
+    // Upload the PNG to Supabase Storage.
+    const { supabase } = await import('../lib/supabase')
+
+    const fileName =
+      `${user.id}/${Date.now()}-custom-kurta.png`
+
+    const { error: uploadError } = await supabase.storage
+      .from('design-previews')
+      .upload(fileName, previewBlob, {
+        contentType: 'image/png',
+        upsert: false
+      })
+
+    if (uploadError) {
+      throw uploadError
+    }
+
+    const { data: imageData } = supabase.storage
+      .from('design-previews')
+      .getPublicUrl(fileName)
+
+    const previewImageUrl = imageData?.publicUrl
+
+    if (!previewImageUrl) {
+      throw new Error('Could not create the preview image URL.')
+    }
+
+    // Save the preview URL with the design.
+    updateField('previewImage', previewImageUrl)
+
+    // Save the design and retrieve its database ID.
+    const savedDesign = await saveDesign(
+      `${selectedStyle.name} Custom Design`
+    )
+
+    if (!savedDesign?.id) {
+      throw new Error('Could not save the customized design.')
+    }
+
+    // Add the saved design to cart.
+    const result = await addToCart(
+      savedDesign.id,
+      1,
+      currentDesign.size || 'M'
+    )
+
+    if (result?.error) {
+      throw result.error
+    }
+
+    toast.success('Customized kurta added to cart!', {
+      id: 'custom-kurta-cart'
+    })
+  } catch (error) {
+    console.error('Add to cart error:', error)
+
+    toast.error(
+      error?.message || 'Failed to add your customized kurta.',
+      { id: 'custom-kurta-cart' }
+    )
+  }
+}
 
   // ------------------------------------------------
   // COMMON CARD STYLES
   // ------------------------------------------------
 
-  const selectedCard = id =>
+  const selectedCard = isSelected =>
     'relative p-4 rounded-2xl border-2 transition-all duration-200 ' +
-    (id
+    (isSelected
       ? 'border-pink-500 bg-pink-50 shadow-md shadow-pink-100'
       : 'border-pink-100 hover:border-pink-300 hover:bg-pink-50')
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-0">
+
       {/* HEADER */}
 
       <motion.div
@@ -487,6 +783,7 @@ export function DesignStudio() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+
           <AnimatePresence mode="wait">
             <motion.section
               key={currentDesign.step}
@@ -632,9 +929,11 @@ export function DesignStudio() {
                             {isSelected && (
                               <Check
                                 className={`w-6 h-6 ${
-                                  ['#ffffff', '#fbbf24', '#fef3c7'].includes(
-                                    color.hex?.toLowerCase()
-                                  )
+                                  [
+                                    '#ffffff',
+                                    '#fbbf24',
+                                    '#fef3c7'
+                                  ].includes(color.hex?.toLowerCase())
                                     ? 'text-pink-700'
                                     : 'text-white'
                                 }`}
@@ -663,8 +962,7 @@ export function DesignStudio() {
                     />
 
                     <p className="text-xs text-pink-500 text-center mt-2">
-                      The selected color is shown as a subtle overlay.
-                      Exact fabric recoloring needs separate color-mask images.
+                      Preview updates to show the selected kurta colour.
                     </p>
                   </div>
                 </div>
@@ -796,6 +1094,7 @@ export function DesignStudio() {
 
               {currentDesign.step === 6 && (
                 <div className="space-y-8">
+
                   {/* SIZE */}
 
                   <div>
@@ -849,8 +1148,7 @@ export function DesignStudio() {
                           {selectedEmbroideryColor === color && (
                             <Check
                               className={`w-5 h-5 ${
-                                color === '#ffffff' ||
-                                color === '#fbbf24'
+                                color === '#ffffff' || color === '#fbbf24'
                                   ? 'text-pink-700'
                                   : 'text-white'
                               }`}
@@ -871,7 +1169,8 @@ export function DesignStudio() {
                     <div className="grid sm:grid-cols-2 gap-5">
                       <div>
                         <label className="block text-sm text-pink-700 mb-2">
-                          Scale: {Number(
+                          Scale:{' '}
+                          {Number(
                             currentDesign.customizations?.scale ?? 1
                           ).toFixed(1)}x
                         </label>
@@ -894,7 +1193,8 @@ export function DesignStudio() {
 
                       <div>
                         <label className="block text-sm text-pink-700 mb-2">
-                          Rotation: {currentDesign.customizations?.rotation ?? 0}°
+                          Rotation:{' '}
+                          {currentDesign.customizations?.rotation ?? 0}°
                         </label>
 
                         <input
@@ -995,60 +1295,42 @@ export function DesignStudio() {
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Kurta
-                      </p>
-
+                      <p className="text-sm text-pink-500">Kurta</p>
                       <p className="font-bold text-pink-800">
                         {selectedStyle?.name || 'Not selected'}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Fabric
-                      </p>
-
+                      <p className="text-sm text-pink-500">Fabric</p>
                       <p className="font-bold text-pink-800">
                         {selectedFabric?.name || 'Not selected'}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Size
-                      </p>
-
+                      <p className="text-sm text-pink-500">Size</p>
                       <p className="font-bold text-pink-800">
                         {currentDesign.size || 'M'}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Embroidery
-                      </p>
-
+                      <p className="text-sm text-pink-500">Embroidery</p>
                       <p className="font-bold text-pink-800">
                         {selectedEmbroidery?.name || 'Not selected'}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Position
-                      </p>
-
+                      <p className="text-sm text-pink-500">Position</p>
                       <p className="font-bold text-pink-800">
                         {selectedPosition?.name || 'Not selected'}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-pink-50 p-4">
-                      <p className="text-sm text-pink-500">
-                        Total Price
-                      </p>
-
+                      <p className="text-sm text-pink-500">Total Price</p>
                       <p className="font-bold text-pink-700 text-xl">
                         ₹{price.total}
                       </p>
@@ -1129,50 +1411,35 @@ export function DesignStudio() {
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between gap-2">
-                <span className="text-gray-600">
-                  Kurta Base
-                </span>
-
+                <span className="text-gray-600">Kurta Base</span>
                 <span className="font-semibold text-pink-700">
                   ₹{price.basePrice}
                 </span>
               </div>
 
               <div className="flex justify-between gap-2">
-                <span className="text-gray-600">
-                  Fabric
-                </span>
-
+                <span className="text-gray-600">Fabric</span>
                 <span className="font-semibold text-pink-700">
                   +₹{price.fabricPrice}
                 </span>
               </div>
 
               <div className="flex justify-between gap-2">
-                <span className="text-gray-600">
-                  Embroidery
-                </span>
-
+                <span className="text-gray-600">Embroidery</span>
                 <span className="font-semibold text-pink-700">
                   +₹{price.embroideryPrice}
                 </span>
               </div>
 
               <div className="flex justify-between gap-2">
-                <span className="text-gray-600">
-                  Customization
-                </span>
-
+                <span className="text-gray-600">Customization</span>
                 <span className="font-semibold text-pink-700">
                   +₹{price.customizationPrice}
                 </span>
               </div>
 
               <div className="border-t border-pink-100 pt-4 flex justify-between gap-2">
-                <span className="font-bold text-pink-800">
-                  Total
-                </span>
-
+                <span className="font-bold text-pink-800">Total</span>
                 <span className="font-playfair font-bold text-xl text-pink-700">
                   ₹{price.total}
                 </span>

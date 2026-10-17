@@ -17,27 +17,67 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const kurtaSilhouettes = {
-  straight: 'polygon(25% 0%, 75% 0%, 85% 100%, 15% 100%)',
-  anarkali: 'polygon(30% 0%, 70% 0%, 95% 100%, 5% 100%)',
-  'a-line': 'polygon(35% 0%, 65% 0%, 90% 100%, 10% 100%)',
-  short: 'polygon(25% 0%, 75% 0%, 80% 60%, 20% 60%)',
-  long: 'polygon(20% 0%, 80% 0%, 90% 100%, 10% 100%)',
-  western: 'polygon(30% 0%, 70% 0%, 75% 70%, 25% 70%)'
+const kurtaImages = {
+  straight: '/kurtas/kurta-collection1.png',
+  anarkali: '/kurtas/kurta-collection2.png',
+  'a-line': '/kurtas/kurta-collection3.png',
+  short: '/kurtas/kurta-collection4.png',
+  long: '/kurtas/kurta-collection5.png',
+  western: '/kurtas/kurta-collection6.png'
 }
 
 const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
 
-function getKurtaSilhouette(style = '') {
-  const normalizedStyle = style.toLowerCase()
+function getKurtaImage(style = '') {
+  const normalized = style.toLowerCase()
 
-  if (normalizedStyle.includes('anarkali')) return kurtaSilhouettes.anarkali
-  if (normalizedStyle.includes('a-line')) return kurtaSilhouettes['a-line']
-  if (normalizedStyle.includes('short')) return kurtaSilhouettes.short
-  if (normalizedStyle.includes('long')) return kurtaSilhouettes.long
-  if (normalizedStyle.includes('western')) return kurtaSilhouettes.western
+  if (normalized.includes('anarkali')) return kurtaImages.anarkali
+  if (normalized.includes('a-line')) return kurtaImages['a-line']
+  if (normalized.includes('short')) return kurtaImages.short
+  if (normalized.includes('long')) return kurtaImages.long
+  if (normalized.includes('western')) return kurtaImages.western
 
-  return kurtaSilhouettes.straight
+  return kurtaImages.straight
+}
+
+function normalizeColor(color) {
+  if (!color) return '#ec4899'
+
+  const value = String(color).trim()
+
+  if (/^#[0-9a-f]{3,8}$/i.test(value)) {
+    return value
+  }
+
+  const namedColors = {
+    pink: '#ec4899',
+    red: '#ef4444',
+    blue: '#3b82f6',
+    black: '#171717',
+    white: '#ffffff',
+    green: '#22c55e',
+    yellow: '#eab308',
+    purple: '#a855f7',
+    maroon: '#800000',
+    navy: '#000080',
+    cream: '#fffdd0',
+    peach: '#ffcba4'
+  }
+
+  return namedColors[value.toLowerCase()] || '#ec4899'
+}
+
+function getEmbroiderySymbol(name = '') {
+  const value = name.toLowerCase()
+
+  if (value.includes('floral') || value.includes('flower')) return '🌸'
+  if (value.includes('paisley')) return '🌿'
+  if (value.includes('peacock')) return '🦚'
+  if (value.includes('butterfly')) return '🦋'
+  if (value.includes('leaf')) return '🍃'
+  if (value.includes('star')) return '⭐'
+
+  return '✨'
 }
 
 export function Cart() {
@@ -48,6 +88,7 @@ export function Cart() {
     removeFromCart,
     clearCart,
     getCartTotal,
+    getCartItemImage,
     loading
   } = useCart()
 
@@ -62,6 +103,7 @@ export function Cart() {
   const [addressesLoading, setAddressesLoading] = useState(false)
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [showAddressForm, setShowAddressForm] = useState(false)
+  const [imageErrors, setImageErrors] = useState({})
 
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
@@ -81,7 +123,7 @@ export function Cart() {
   const total = Math.max(0, subtotal + shipping - discountAmount)
 
   const cartQuantity = cartItems.reduce(
-    (count, item) => count + item.quantity,
+    (count, item) => count + Number(item.quantity || 0),
     0
   )
 
@@ -93,17 +135,16 @@ export function Cart() {
 
     setAddressesLoading(true)
 
-    const { data, error } = await supabase
-      .from('addresses')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true })
 
-    if (error) {
-      console.error('Could not load addresses:', error)
-      toast.error('Could not load saved addresses 😢', { emoji: true })
-    } else {
+      if (error) throw error
+
       const savedAddresses = data || []
 
       setAddresses(savedAddresses)
@@ -122,9 +163,12 @@ export function Cart() {
           ''
         )
       })
+    } catch (error) {
+      console.error('Could not load addresses:', error)
+      toast.error('Could not load saved addresses 😢')
+    } finally {
+      setAddressesLoading(false)
     }
-
-    setAddressesLoading(false)
   }
 
   useEffect(() => {
@@ -151,45 +195,50 @@ export function Cart() {
     event.preventDefault()
 
     if (!user) {
-      toast.error('Please login first 🔒', { emoji: true })
+      toast.error('Please login first 🔒')
       return
     }
 
-    const { data, error } = await supabase
-      .from('addresses')
-      .insert({
-        user_id: user.id,
-        label: addressForm.label,
-        name: addressForm.name,
-        phone: addressForm.phone,
-        address_line1: addressForm.address_line1,
-        address_line2: addressForm.address_line2 || null,
-        city: addressForm.city,
-        state: addressForm.state,
-        pincode: addressForm.pincode,
-        is_default: addressForm.is_default
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error(error)
-      toast.error('Could not save address 😢', { emoji: true })
-      return
-    }
-
-    if (addressForm.is_default) {
-      await supabase
+    try {
+      const { data, error } = await supabase
         .from('addresses')
-        .update({ is_default: false })
-        .eq('user_id', user.id)
-        .neq('id', data.id)
-    }
+        .insert({
+          user_id: user.id,
+          label: addressForm.label,
+          name: addressForm.name,
+          phone: addressForm.phone,
+          address_line1: addressForm.address_line1,
+          address_line2: addressForm.address_line2 || null,
+          city: addressForm.city,
+          state: addressForm.state,
+          pincode: addressForm.pincode,
+          is_default: addressForm.is_default
+        })
+        .select()
+        .single()
 
-    setSelectedAddressId(data.id)
-    setShowAddressForm(false)
-    toast.success('Address saved! 📍', { emoji: true })
-    await loadAddresses()
+      if (error) throw error
+
+      if (addressForm.is_default) {
+        const { error: defaultError } = await supabase
+          .from('addresses')
+          .update({ is_default: false })
+          .eq('user_id', user.id)
+          .neq('id', data.id)
+
+        if (defaultError) throw defaultError
+      }
+
+      setSelectedAddressId(data.id)
+      setShowAddressForm(false)
+
+      toast.success('Address saved! 📍')
+
+      await loadAddresses()
+    } catch (error) {
+      console.error('Could not save address:', error)
+      toast.error('Could not save address 😢')
+    }
   }
 
   const applyPromo = () => {
@@ -200,26 +249,26 @@ export function Cart() {
       FIRST50: 50
     }
 
-    const upperCode = promoCode.trim().toUpperCase()
+    const code = promoCode.trim().toUpperCase()
 
-    if (codes[upperCode]) {
-      setDiscountRate(codes[upperCode])
-      toast.success(`Promo applied! ${codes[upperCode]}% off ✨`, {
-        emoji: true
-      })
+    if (codes[code]) {
+      setDiscountRate(codes[code])
+
+      toast.success(`Promo applied! ${codes[code]}% off ✨`)
     } else {
-      toast.error('Invalid promo code 😢', { emoji: true })
+      setDiscountRate(0)
+      toast.error('Invalid promo code 😢')
     }
   }
 
   const handleCheckout = () => {
     if (!user) {
-      toast.error('Please login to checkout 🔒', { emoji: true })
+      toast.error('Please login to checkout 🔒')
       return
     }
 
     if (cartItems.length === 0) {
-      toast.error('Your cart is empty 🛒', { emoji: true })
+      toast.error('Your cart is empty 🛒')
       return
     }
 
@@ -232,19 +281,18 @@ export function Cart() {
     )
 
     if (!selectedAddress) {
-      toast.error('Please select or add a delivery address 📍', {
-        emoji: true
-      })
+      toast.error('Please select or add a delivery address 📍')
       return
     }
 
     if (!paymentMethod) {
-      toast.error('Please select a payment method 💳', { emoji: true })
+      toast.error('Please select a payment method 💳')
       return
     }
 
     const cartDetails = cartItems.map((cartItem) => {
-      const productOrDesign = cartItem.user_designs || cartItem.products
+      const productOrDesign =
+        cartItem.user_designs || cartItem.products
 
       if (!productOrDesign) return null
 
@@ -256,76 +304,77 @@ export function Cart() {
       return {
         product_id: cartItem.product_id || null,
         design_id: cartItem.design_id || null,
-        quantity: cartItem.quantity,
+        quantity: Number(cartItem.quantity || 1),
         size: cartItem.size,
         unit_price: unitPrice,
-        total_price: unitPrice * cartItem.quantity
+        total_price: unitPrice * Number(cartItem.quantity || 1)
       }
     })
 
     if (cartDetails.some((item) => item === null)) {
-      toast.error('One cart item could not be processed 😢', { emoji: true })
+      toast.error('One cart item could not be processed 😢')
       return
     }
 
-    const { data: newOrder, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: user.id,
-        subtotal,
-        shipping,
-        discount: discountAmount,
-        total,
-        status: 'placed',
-        payment_method: paymentMethod,
-        payment_status: 'pending',
-        shipping_address: {
-          label: selectedAddress.label,
-          name: selectedAddress.name,
-          phone: selectedAddress.phone,
-          address_line1: selectedAddress.address_line1,
-          address_line2: selectedAddress.address_line2,
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          pincode: selectedAddress.pincode,
-          country: selectedAddress.country || 'India'
-        },
-        promo_code: promoCode.trim().toUpperCase() || null
-      })
-      .select()
-      .single()
+    try {
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          subtotal,
+          shipping,
+          discount: discountAmount,
+          total,
+          status: 'placed',
+          payment_method: paymentMethod,
+          payment_status: 'pending',
+          shipping_address: {
+            label: selectedAddress.label,
+            name: selectedAddress.name,
+            phone: selectedAddress.phone,
+            address_line1: selectedAddress.address_line1,
+            address_line2: selectedAddress.address_line2,
+            city: selectedAddress.city,
+            state: selectedAddress.state,
+            pincode: selectedAddress.pincode,
+            country: selectedAddress.country || 'India'
+          },
+          promo_code: promoCode.trim().toUpperCase() || null
+        })
+        .select()
+        .single()
 
-    if (orderError) {
-      console.error(orderError)
-      toast.error('Could not create your order 😢', { emoji: true })
-      return
+      if (orderError) throw orderError
+
+      const orderItems = cartDetails.map((item) => ({
+        ...item,
+        order_id: newOrder.id
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems)
+
+      if (itemsError) {
+        console.error('Order items error:', itemsError)
+
+        toast.error(
+          'Order was created, but its items could not be saved 😢'
+        )
+        return
+      }
+
+      await clearCart()
+
+      setShowCheckout(false)
+
+      toast.success(`Order ${newOrder.order_number} placed! 🎉`)
+
+      navigate('/orders')
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast.error('Could not create your order 😢')
     }
-
-    const orderItems = cartDetails.map((item) => ({
-      ...item,
-      order_id: newOrder.id
-    }))
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems)
-
-    if (itemsError) {
-      console.error(itemsError)
-      toast.error('Order was created, but its items could not be saved 😢', {
-        emoji: true
-      })
-      return
-    }
-
-    await clearCart()
-    setShowCheckout(false)
-
-    toast.success(`Order ${newOrder.order_number} placed! 🎉`, {
-      emoji: true
-    })
-
-    navigate('/orders')
   }
 
   if (loading) {
@@ -333,7 +382,9 @@ export function Cart() {
       <div className="max-w-7xl mx-auto">
         <div className="card p-12 text-center">
           <div className="loading-thread mx-auto mb-4" />
-          <p className="font-poppins text-pink-500">Loading your cart... 🛒</p>
+          <p className="font-poppins text-pink-500">
+            Loading your cart... 🛒
+          </p>
         </div>
       </div>
     )
@@ -348,13 +399,16 @@ export function Cart() {
           className="card p-16 text-center"
         >
           <span className="text-6xl block mb-4">🛒</span>
+
           <h1 className="font-playfair text-3xl font-bold text-pink-700 mb-2">
             Your cart is empty
           </h1>
+
           <p className="font-poppins text-pink-500 mb-6">
             Looks like you haven't added any designs yet
           </p>
-          <Link to="/shop" className="btn-primary inline-block">
+
+          <Link to="/shop" className="btn-primary inline-flex items-center">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Continue Shopping
           </Link>
@@ -374,6 +428,7 @@ export function Cart() {
         <h1 className="font-playfair text-3xl md:text-4xl font-bold bg-gradient-pink-dark bg-clip-text text-transparent">
           Shopping Cart 🛒
         </h1>
+
         <p className="font-poppins text-pink-500 mt-1">
           {cartQuantity} item{cartQuantity !== 1 ? 's' : ''} in your cart
         </p>
@@ -388,7 +443,9 @@ export function Cart() {
         >
           <AnimatePresence>
             {cartItems.map((item, index) => {
-              const productOrDesign = item.user_designs || item.products
+              const productOrDesign =
+                item.user_designs || item.products
+
               if (!productOrDesign) return null
 
               const design = {
@@ -397,18 +454,24 @@ export function Cart() {
                   productOrDesign.kurta_style ||
                   productOrDesign.style ||
                   'Straight Kurta',
-                color:
+                color: normalizeColor(
                   productOrDesign.color ||
-                  productOrDesign.colors?.[0] ||
-                  '#ec4899',
+                  (Array.isArray(productOrDesign.colors)
+                    ? productOrDesign.colors[0]
+                    : productOrDesign.colors) ||
+                  '#ec4899'
+                ),
                 embroidery_design:
                   productOrDesign.embroidery_design || 'Handcrafted',
                 embroidery_position:
-                  productOrDesign.embroidery_position || 'Ready-to-wear',
-                embroidery_color:
-                  productOrDesign.embroidery_color || '#ec4899',
+                  productOrDesign.embroidery_position || 'Chest',
+                embroidery_color: normalizeColor(
+                  productOrDesign.embroidery_color || '#ec4899'
+                ),
                 base_price: Number(productOrDesign.base_price || 0),
-                embroidery_price: Number(productOrDesign.embroidery_price || 0),
+                embroidery_price: Number(
+                  productOrDesign.embroidery_price || 0
+                ),
                 customization_price: Number(
                   productOrDesign.customization_price || 0
                 )
@@ -419,12 +482,16 @@ export function Cart() {
                 design.embroidery_price +
                 design.customization_price
 
-              const fabricClass =
-                design.fabric?.toLowerCase() === 'cotton'
-                  ? 'fabric-cotton'
-                  : design.fabric?.toLowerCase() === 'silk'
-                    ? 'fabric-silk'
-                    : 'fabric-linen'
+              const savedImage =
+                typeof getCartItemImage === 'function'
+                  ? getCartItemImage(item)
+                  : productOrDesign.preview_image_url || null
+
+              const fallbackImage = getKurtaImage(design.kurta_style)
+
+              const imageSrc = imageErrors[item.id]
+                ? fallbackImage
+                : savedImage || fallbackImage
 
               return (
                 <motion.article
@@ -435,61 +502,62 @@ export function Cart() {
                   transition={{ delay: index * 0.05, duration: 0.3 }}
                   className="card-elevated flex flex-col md:flex-row gap-4 p-4"
                 >
-                  <div className="relative w-32 h-40 md:w-40 md:h-48 flex-shrink-0">
-                    <div
-                      className="absolute inset-0 bg-gradient-to-br from-pink-50 to-pink-100"
-                      style={{
-                        clipPath: getKurtaSilhouette(design.kurta_style)
+                  {/* Kurta image preview */}
+                  <div className="relative w-full h-56 md:w-40 md:h-48 flex-shrink-0 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 overflow-hidden">
+                    <img
+                      src={imageSrc}
+                      alt={`${design.kurta_style} in selected color`}
+                      className="w-full h-full object-contain p-2"
+                      onError={() => {
+                        if (!imageErrors[item.id]) {
+                          setImageErrors((previous) => ({
+                            ...previous,
+                            [item.id]: true
+                          }))
+                        }
                       }}
-                    >
-                      <div className={`absolute inset-0 ${fabricClass} opacity-30`} />
-                      <div
-                        className="absolute inset-0"
-                        style={{ backgroundColor: design.color }}
-                      >
-                        <div className="absolute inset-0 bg-white/10" />
-                      </div>
-                    </div>
+                    />
 
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute left-1/2 top-1/2"
-                      style={{
-                        transform: 'translate(-50%, -50%)',
-                        color: design.embroidery_color
-                      }}
-                    >
-                      <span className="text-2xl">
-                        {design.embroidery_design === 'Floral'
-                          ? '🌸'
-                          : design.embroidery_design === 'Paisley'
-                            ? '🌿'
-                            : design.embroidery_design === 'Peacock'
-                              ? '🦚'
-                              : design.embroidery_design === 'Butterfly'
-                                ? '🦋'
-                                : '✨'}
+                    {/* Color indicator */}
+                    <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-white/90 rounded-full px-2 py-1 shadow-sm">
+                      <span
+                        className="w-4 h-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: design.color }}
+                      />
+
+                      <span className="text-xs text-gray-700">
+                        Selected color
                       </span>
-                    </motion.div>
+                    </div>
                   </div>
 
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
                       <h3 className="font-playfair font-bold text-pink-800 truncate">
-                        {design.name}
+                        {design.name || `${design.kurta_style} Custom Design`}
                       </h3>
 
                       <div className="flex flex-wrap gap-1 mt-2">
-                        <span className="badge badge-pink">{design.kurta_style}</span>
-                        <span className="badge badge-pink">{design.fabric}</span>
+                        <span className="badge badge-pink">
+                          {design.kurta_style}
+                        </span>
+
+                        <span className="badge badge-pink">
+                          {design.fabric || 'Fabric'}
+                        </span>
+
                         <span className="badge badge-rose">
                           {design.embroidery_design}
                         </span>
+
                         <span className="badge badge-rose">
                           {design.embroidery_position}
                         </span>
                       </div>
+
+                      <p className="text-xs text-pink-500 mt-2">
+                        Embroidery color: {design.embroidery_color}
+                      </p>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4 pt-4 border-t border-pink-100">
@@ -497,8 +565,9 @@ export function Cart() {
                         <label className="font-poppins text-sm text-pink-600">
                           Size:
                         </label>
+
                         <select
-                          value={item.size}
+                          value={item.size || 'M'}
                           onChange={(event) =>
                             updateSize(item.id, event.target.value)
                           }
@@ -516,13 +585,18 @@ export function Cart() {
                         <label className="font-poppins text-sm text-pink-600">
                           Qty:
                         </label>
+
                         <div className="flex items-center border border-pink-200 rounded-lg overflow-hidden">
                           <button
                             onClick={() =>
-                              updateQuantity(item.id, item.quantity - 1)
+                              updateQuantity(
+                                item.id,
+                                Number(item.quantity) - 1
+                              )
                             }
-                            disabled={item.quantity <= 1}
+                            disabled={Number(item.quantity) <= 1}
                             className="px-3 py-1.5 text-pink-600 hover:bg-pink-50 disabled:opacity-50"
+                            aria-label="Decrease quantity"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
@@ -533,20 +607,25 @@ export function Cart() {
 
                           <button
                             onClick={() =>
-                              updateQuantity(item.id, item.quantity + 1)
+                              updateQuantity(
+                                item.id,
+                                Number(item.quantity) + 1
+                              )
                             }
                             className="px-3 py-1.5 text-pink-600 hover:bg-pink-50"
+                            aria-label="Increase quantity"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <motion.button
                           onClick={() => removeFromCart(item.id)}
                           whileHover={{ scale: 1.1 }}
                           className="p-2 rounded-lg text-rose-400 hover:bg-rose-50"
+                          aria-label="Remove item"
                         >
                           <Trash2 className="w-5 h-5" />
                         </motion.button>
@@ -554,6 +633,10 @@ export function Cart() {
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           className="p-2 rounded-lg text-pink-400 hover:bg-pink-50"
+                          aria-label="Add to wishlist"
+                          onClick={() =>
+                            toast('Wishlist feature is not connected yet 💗')
+                          }
                         >
                           <Heart className="w-5 h-5" />
                         </motion.button>
@@ -563,10 +646,11 @@ export function Cart() {
 
                   <div className="md:w-32 text-right md:text-left">
                     <p className="font-playfair text-xl font-bold text-pink-700">
-                      ₹{unitPrice * item.quantity}
+                      ₹{(unitPrice * Number(item.quantity || 1)).toFixed(0)}
                     </p>
+
                     <p className="font-poppins text-sm text-pink-400">
-                      × {item.quantity}
+                      ₹{unitPrice.toFixed(0)} × {item.quantity}
                     </p>
                   </div>
                 </motion.article>
@@ -576,7 +660,15 @@ export function Cart() {
 
           {cartItems.length > 1 && (
             <motion.button
-              onClick={clearCart}
+              onClick={async () => {
+                const result = await clearCart()
+
+                if (result?.error) {
+                  toast.error('Could not clear cart')
+                } else {
+                  toast.success('Cart cleared successfully')
+                }
+              }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="btn-secondary w-full md:w-auto"
@@ -587,6 +679,7 @@ export function Cart() {
           )}
         </motion.div>
 
+        {/* Order summary */}
         <motion.aside
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -601,7 +694,9 @@ export function Cart() {
             <div className="space-y-3 text-sm font-poppins">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({cartQuantity} items)</span>
-                <span className="font-medium text-pink-700">₹{subtotal}</span>
+                <span className="font-medium text-pink-700">
+                  ₹{subtotal.toFixed(0)}
+                </span>
               </div>
 
               <div className="flex justify-between text-gray-600">
@@ -614,7 +709,7 @@ export function Cart() {
               <div className="flex justify-between text-gray-600">
                 <span>Discount</span>
                 <span className="font-medium text-green-600">
-                  -₹{discountAmount}
+                  -₹{discountAmount.toFixed(0)}
                 </span>
               </div>
 
@@ -622,26 +717,32 @@ export function Cart() {
                 <span className="font-playfair font-bold text-pink-800">
                   Total
                 </span>
+
                 <span className="font-playfair text-2xl font-bold text-pink-700">
-                  ₹{total}
+                  ₹{total.toFixed(0)}
                 </span>
               </div>
             </div>
 
             <div className="mt-4 p-3 bg-pink-50 rounded-xl">
-              <label className="input-label mb-2">Promo Code 🎁</label>
+              <label className="input-label mb-2">
+                Promo Code 🎁
+              </label>
+
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={promoCode}
                   onChange={(event) => setPromoCode(event.target.value)}
                   placeholder="Enter promo code"
-                  className="input-field flex-1"
+                  className="input-field flex-1 min-w-0"
                 />
+
                 <button onClick={applyPromo} className="btn-secondary">
                   Apply
                 </button>
               </div>
+
               <p className="font-poppins text-xs text-pink-400 mt-2">
                 Try: WELCOME10, THREAD20, BLOOM15, FIRST50
               </p>
@@ -662,15 +763,18 @@ export function Cart() {
             <h3 className="font-playfair text-lg font-bold text-pink-800 mb-4">
               🚚 Delivery Info
             </h3>
+
             <div className="space-y-3 text-sm font-poppins text-pink-600">
               <div className="flex items-center gap-2">
                 <Truck className="w-5 h-5 text-pink-500" />
                 <span>Free delivery on orders above ₹2000</span>
               </div>
+
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-pink-500" />
                 <span>Gift wrapping available at checkout</span>
               </div>
+
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-pink-500" />
                 <span>Multiple payment options</span>
@@ -680,6 +784,7 @@ export function Cart() {
         </motion.aside>
       </div>
 
+      {/* Checkout modal */}
       <AnimatePresence>
         {showCheckout && (
           <motion.div
@@ -700,9 +805,11 @@ export function Cart() {
                 <h2 className="font-playfair text-2xl font-bold text-pink-800">
                   Checkout 💳
                 </h2>
+
                 <button
                   onClick={() => setShowCheckout(false)}
                   className="p-2 rounded-xl text-pink-500 hover:bg-pink-100"
+                  aria-label="Close checkout"
                 >
                   ✕
                 </button>
@@ -710,10 +817,11 @@ export function Cart() {
 
               <div className="p-6 space-y-6">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3 gap-3">
                     <h3 className="font-playfair text-lg font-bold text-pink-800">
                       Delivery Address
                     </h3>
+
                     <button
                       onClick={openAddressForm}
                       className="btn-secondary text-sm"
@@ -730,6 +838,7 @@ export function Cart() {
                       <div className="grid md:grid-cols-2 gap-3">
                         <div>
                           <label className="input-label">Address Label</label>
+
                           <select
                             value={addressForm.label}
                             onChange={(event) =>
@@ -748,6 +857,7 @@ export function Cart() {
 
                         <div>
                           <label className="input-label">Full Name</label>
+
                           <input
                             required
                             value={addressForm.name}
@@ -763,6 +873,7 @@ export function Cart() {
 
                         <div>
                           <label className="input-label">Phone</label>
+
                           <input
                             required
                             type="tel"
@@ -779,6 +890,7 @@ export function Cart() {
 
                         <div>
                           <label className="input-label">Pincode</label>
+
                           <input
                             required
                             value={addressForm.pincode}
@@ -794,7 +906,10 @@ export function Cart() {
                       </div>
 
                       <div>
-                        <label className="input-label">Address Line 1</label>
+                        <label className="input-label">
+                          Address Line 1
+                        </label>
+
                         <input
                           required
                           value={addressForm.address_line1}
@@ -809,7 +924,10 @@ export function Cart() {
                       </div>
 
                       <div>
-                        <label className="input-label">Address Line 2</label>
+                        <label className="input-label">
+                          Address Line 2
+                        </label>
+
                         <input
                           value={addressForm.address_line2}
                           onChange={(event) =>
@@ -825,6 +943,7 @@ export function Cart() {
                       <div className="grid md:grid-cols-2 gap-3">
                         <div>
                           <label className="input-label">City</label>
+
                           <input
                             required
                             value={addressForm.city}
@@ -840,6 +959,7 @@ export function Cart() {
 
                         <div>
                           <label className="input-label">State</label>
+
                           <input
                             required
                             value={addressForm.state}
@@ -865,13 +985,18 @@ export function Cart() {
                             })
                           }
                         />
+
                         Make this my default address
                       </label>
 
                       <div className="flex gap-3">
-                        <button type="submit" className="btn-primary flex-1">
+                        <button
+                          type="submit"
+                          className="btn-primary flex-1"
+                        >
                           Save Address
                         </button>
+
                         <button
                           type="button"
                           onClick={() => setShowAddressForm(false)}
@@ -910,22 +1035,27 @@ export function Cart() {
                             type="radio"
                             name="address"
                             checked={selectedAddressId === address.id}
-                            onChange={() => setSelectedAddressId(address.id)}
+                            onChange={() =>
+                              setSelectedAddressId(address.id)
+                            }
                             className="mt-1 w-4 h-4"
                           />
 
                           <div className="flex-1">
                             <p className="font-poppins font-medium text-pink-800">
                               {address.label}
+
                               {address.is_default && (
                                 <span className="ml-2 text-xs text-pink-500">
                                   Default
                                 </span>
                               )}
                             </p>
+
                             <p className="font-poppins text-sm text-pink-600">
                               {address.name} · {address.phone}
                             </p>
+
                             <p className="font-poppins text-sm text-pink-500">
                               {address.address_line1}
                               {address.address_line2 &&
@@ -969,6 +1099,7 @@ export function Cart() {
                           }
                           className="w-4 h-4"
                         />
+
                         <span className="font-poppins text-pink-700">
                           {label}
                         </span>
@@ -980,24 +1111,30 @@ export function Cart() {
                 <div className="border-t border-pink-100 pt-4">
                   <div className="flex justify-between text-sm font-poppins mb-2">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="text-pink-700">₹{subtotal}</span>
+                    <span className="text-pink-700">
+                      ₹{subtotal.toFixed(0)}
+                    </span>
                   </div>
+
                   <div className="flex justify-between text-sm font-poppins mb-2">
                     <span className="text-gray-600">Shipping</span>
                     <span className="text-pink-700">
                       {shipping === 0 ? 'FREE' : `₹${shipping}`}
                     </span>
                   </div>
+
                   <div className="flex justify-between text-sm font-poppins mb-2 text-green-600">
                     <span>Discount</span>
-                    <span>-₹{discountAmount}</span>
+                    <span>-₹{discountAmount.toFixed(0)}</span>
                   </div>
+
                   <div className="border-t border-pink-100 pt-3 flex justify-between">
                     <span className="font-playfair font-bold text-pink-800 text-lg">
                       Total
                     </span>
+
                     <span className="font-playfair text-2xl font-bold text-pink-700">
-                      ₹{total}
+                      ₹{total.toFixed(0)}
                     </span>
                   </div>
                 </div>

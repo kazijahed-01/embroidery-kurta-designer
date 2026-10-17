@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState
+} from 'react'
+
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 
@@ -6,9 +13,11 @@ const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
   const { user } = useAuth()
+
   const [cartItems, setCartItems] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Fetch cart items with their related designs and products.
   const fetchCart = useCallback(async () => {
     if (!user) {
       setCartItems([])
@@ -51,7 +60,9 @@ export function CartProvider({ children }) {
         `)
         .eq('user_id', user.id)
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
       setCartItems(data || [])
     } catch (error) {
@@ -66,9 +77,75 @@ export function CartProvider({ children }) {
     fetchCart()
   }, [fetchCart])
 
-  const addItemToCart = async (column, itemId, quantity = 1, size = 'M') => {
+  // Safely get an image URL from a design or product.
+  const getCartItemImage = useCallback((item) => {
+    const design = item?.user_designs
+    const product = item?.products
+
+    // Prefer the saved customized design preview.
+    if (design?.preview_image_url) {
+      return design.preview_image_url
+    }
+
+    // Fallback for ready-made products.
+    const images = product?.images
+
+    if (Array.isArray(images)) {
+      return images[0] || null
+    }
+
+    if (typeof images === 'string' && images.trim()) {
+      try {
+        const parsed = JSON.parse(images)
+
+        if (Array.isArray(parsed)) {
+          return parsed[0] || null
+        }
+
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed.url || parsed.image_url || null
+        }
+
+        return null
+      } catch {
+        // A plain URL may be stored as a string.
+        return images
+      }
+    }
+
+    if (images && typeof images === 'object') {
+      return images.url || images.image_url || null
+    }
+
+    return null
+  }, [])
+
+  // Add a design or ready-made product to the cart.
+  const addItemToCart = async (
+    column,
+    itemId,
+    quantity = 1,
+    size = 'M'
+  ) => {
     if (!user) {
-      return { error: { message: 'Please login first' } }
+      return {
+        data: null,
+        error: { message: 'Please login first' }
+      }
+    }
+
+    if (!itemId) {
+      return {
+        data: null,
+        error: { message: 'Item ID is missing' }
+      }
+    }
+
+    if (!['design_id', 'product_id'].includes(column)) {
+      return {
+        data: null,
+        error: { message: 'Invalid cart item type' }
+      }
     }
 
     try {
@@ -80,15 +157,21 @@ export function CartProvider({ children }) {
         .eq('size', size)
         .maybeSingle()
 
-      if (existingError) return { error: existingError }
+      if (existingError) {
+        return { data: null, error: existingError }
+      }
 
       let result
 
       if (existing) {
         result = await supabase
           .from('cart_items')
-          .update({ quantity: existing.quantity + quantity })
+          .update({
+            quantity:
+              Number(existing.quantity || 0) + Number(quantity)
+          })
           .eq('id', existing.id)
+          .eq('user_id', user.id)
           .select()
           .single()
       } else {
@@ -97,98 +180,155 @@ export function CartProvider({ children }) {
           .insert({
             user_id: user.id,
             [column]: itemId,
-            quantity,
+            quantity: Number(quantity),
             size
           })
           .select()
           .single()
       }
 
-      if (result.data) await fetchCart()
+      if (result.error) {
+        return result
+      }
+
+      await fetchCart()
 
       return result
     } catch (error) {
-      return { error }
+      console.error('Error adding item to cart:', error)
+
+      return {
+        data: null,
+        error
+      }
     }
   }
 
-  // Used for custom designs from Design Studio
+  // Custom designs from Design Studio.
   const addToCart = (designId, quantity = 1, size = 'M') => {
     return addItemToCart('design_id', designId, quantity, size)
   }
 
-  // Used for ready-made products from Explore / Shop
+  // Ready-made products from Shop.
   const addProductToCart = (productId, quantity = 1, size = 'M') => {
     return addItemToCart('product_id', productId, quantity, size)
   }
 
+  // Update quantity.
   const updateQuantity = async (cartItemId, quantity) => {
-    if (quantity <= 0) return removeFromCart(cartItemId)
+    if (!user) {
+      return {
+        data: null,
+        error: { message: 'Please login first' }
+      }
+    }
+
+    if (Number(quantity) <= 0) {
+      return removeFromCart(cartItemId)
+    }
 
     const { data, error } = await supabase
       .from('cart_items')
-      .update({ quantity })
+      .update({ quantity: Number(quantity) })
       .eq('id', cartItemId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
-    if (data) await fetchCart()
+    if (!error) {
+      await fetchCart()
+    }
 
     return { data, error }
   }
 
+  // Update size.
   const updateSize = async (cartItemId, size) => {
+    if (!user) {
+      return {
+        data: null,
+        error: { message: 'Please login first' }
+      }
+    }
+
     const { data, error } = await supabase
       .from('cart_items')
       .update({ size })
       .eq('id', cartItemId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
-    if (data) await fetchCart()
+    if (!error) {
+      await fetchCart()
+    }
 
     return { data, error }
   }
 
+  // Remove one item.
   const removeFromCart = async (cartItemId) => {
+    if (!user) {
+      return {
+        error: { message: 'Please login first' }
+      }
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
       .eq('id', cartItemId)
+      .eq('user_id', user.id)
 
-    if (!error) await fetchCart()
+    if (!error) {
+      await fetchCart()
+    }
 
     return { error }
   }
 
+  // Clear the current user's cart.
   const clearCart = async () => {
-    if (!user) return
+    if (!user) {
+      return { error: null }
+    }
 
-    await supabase
+    const { error } = await supabase
       .from('cart_items')
       .delete()
       .eq('user_id', user.id)
 
-    await fetchCart()
+    if (!error) {
+      await fetchCart()
+    }
+
+    return { error }
   }
 
+  // Calculate the total using the stored prices.
   const getCartTotal = () => {
     return cartItems.reduce((total, item) => {
       const productOrDesign = item.user_designs || item.products
 
-      if (!productOrDesign) return total
+      if (!productOrDesign) {
+        return total
+      }
 
       const unitPrice =
         Number(productOrDesign.base_price || 0) +
         Number(productOrDesign.embroidery_price || 0) +
         Number(productOrDesign.customization_price || 0)
 
-      return total + unitPrice * item.quantity
+      return total + unitPrice * Number(item.quantity || 0)
     }, 0)
   }
 
+  // Count all pieces.
   const getCartCount = () => {
-    return cartItems.reduce((count, item) => count + item.quantity, 0)
+    return cartItems.reduce(
+      (count, item) => count + Number(item.quantity || 0),
+      0
+    )
   }
 
   return (
@@ -204,6 +344,7 @@ export function CartProvider({ children }) {
         clearCart,
         getCartTotal,
         getCartCount,
+        getCartItemImage,
         refreshCart: fetchCart
       }}
     >
